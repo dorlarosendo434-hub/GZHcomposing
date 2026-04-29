@@ -134,7 +134,7 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 .sd-empty{padding:16px;text-align:center;color:var(--text3);font-size:13px}
 
 /* Image Insert Panel */
-.img-panel{position:absolute;top:100%;left:0;background:var(--white);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 16px rgba(0,0,0,.12);width:340px;padding:16px;z-index:250;display:none}
+.img-panel{position:absolute;top:100%;left:0;background:var(--white);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 16px rgba(0,0,0,.12);width:370px;padding:16px;z-index:250;display:none}
 .img-panel.show{display:block}
 .img-panel h4{font-size:13px;margin-bottom:10px}
 .img-panel .tab-row{display:flex;gap:4px;margin-bottom:12px}
@@ -147,6 +147,7 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 .img-upload-area{border:2px dashed var(--border);border-radius:var(--radius);padding:20px;text-align:center;color:var(--text3);font-size:12px;cursor:pointer;transition:all .2s;margin-bottom:8px}
 .img-upload-area:hover{border-color:var(--primary);color:var(--primary)}
 .img-upload-area input[type=file]{display:none}
+.img-layout-note{font-size:11px;color:var(--text3);line-height:1.5;margin:-2px 0 8px}
 
 /* ===== Help Modal ===== */
 .help-content{font-size:13px;line-height:1.8;color:var(--text2)}
@@ -212,14 +213,23 @@ input,select,textarea{font-family:inherit;font-size:inherit}
             <button class="tab-btn active" onclick="switchImgTab('upload',this)">本地上传</button>
             <button class="tab-btn" onclick="switchImgTab('url',this)">URL地址</button>
           </div>
+          <div class="img-options">
+            <label style="font-size:11px;color:#666;margin-right:2px">布局</label>
+            <select id="imgLayout" onchange="switchImgLayout(this.value)">
+              <option value="single">单张图片</option>
+              <option value="double">双图并排</option>
+            </select>
+          </div>
+          <div class="img-layout-note" id="imgLayoutNote">单张图片适合封面、长图和正文配图。</div>
           <div id="imgTabUpload">
             <div class="img-upload-area" onclick="document.getElementById('imgFileInput').click()">
-              点击选择图片 或 拖拽到此处
-              <input type="file" id="imgFileInput" accept="image/png,image/jpeg,image/gif,image/webp" onchange="handleImgFile(this)">
+              点击选择图片，双图并排可一次选择2张
+              <input type="file" id="imgFileInput" accept="image/png,image/jpeg,image/gif,image/webp" onchange="handleImgFile(this)" multiple>
             </div>
           </div>
           <div id="imgTabUrl" style="display:none">
             <input type="text" id="imgUrlInput" placeholder="输入图片URL地址">
+            <input type="text" id="imgUrlInput2" placeholder="双图并排时输入第二张图片URL" style="display:none">
           </div>
           <div class="img-options">
             <select id="imgAlign">
@@ -687,7 +697,7 @@ function insertSafeHTML(html) {
 // ===================================================================
 // IMAGE INSERT
 // ===================================================================
-let pendingImgData = null;
+let pendingImgData = [];
 let savedEditorRange = null;
 function toggleImgPanel() {
   // Save cursor position before opening panel
@@ -703,33 +713,50 @@ function switchImgTab(tab, btn) {
   $('imgTabUrl').style.display = tab === 'url' ? '' : 'none';
   btn.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  pendingImgData = null;
+  pendingImgData = [];
+}
+function switchImgLayout(layout) {
+  const isDouble = layout === 'double';
+  const secondUrl = $('imgUrlInput2');
+  const note = $('imgLayoutNote');
+  if (secondUrl) secondUrl.style.display = isDouble ? '' : 'none';
+  if (note) {
+    note.textContent = isDouble
+      ? '双图并排适合两张横图、对比图或步骤图；本地上传可一次选择2张。'
+      : '单张图片适合封面、长图和正文配图。';
+  }
 }
 function handleImgFile(input) {
-  const file = input.files[0];
-  if (!file) return;
-  if (!/^image\/(?:png|jpe?g|gif|webp)$/i.test(file.type)) {
+  const files = Array.from(input.files || []).slice(0, 2);
+  if (!files.length) return;
+  const badFile = files.find(file => !/^image\/(?:png|jpe?g|gif|webp)$/i.test(file.type));
+  if (badFile) {
     alert('仅支持 PNG、JPG、GIF、WebP 图片，已拦截不安全格式');
     input.value = '';
     return;
   }
-  if (file.size > 10 * 1024 * 1024) {
-    alert('图片不能超过 10MB');
+  const largeFile = files.find(file => file.size > 10 * 1024 * 1024);
+  if (largeFile) {
+    alert('单张图片不能超过 10MB');
     input.value = '';
     return;
   }
-  const reader = new FileReader();
-  reader.onload = e => {
-    pendingImgData = sanitizeImageSrc(e.target.result);
-    if (!pendingImgData) {
+  Promise.all(files.map(file => new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => resolve({ file, src: sanitizeImageSrc(e.target.result) });
+    reader.onerror = () => resolve({ file, src: '' });
+    reader.readAsDataURL(file);
+  }))).then(items => {
+    pendingImgData = items.map(item => item.src).filter(Boolean);
+    if (pendingImgData.length !== files.length) {
       alert('图片读取失败或格式不安全');
       return;
     }
     // Visual feedback: show thumbnail + filename
     const area = input.closest('.img-upload-area') || input.parentElement;
-    area.innerHTML = `<div style="text-align:center"><img src="${escapeAttr(pendingImgData)}" style="max-width:100%;max-height:120px;border-radius:8px;margin-bottom:6px"><br><span style="font-size:11px;color:#16a34a;font-weight:600">✅ ${escapeHtml(file.name)}</span></div><input type="file" id="imgFileInput" accept="image/png,image/jpeg,image/gif,image/webp" onchange="handleImgFile(this)" style="display:none">`;
-  };
-  reader.readAsDataURL(file);
+    const thumbs = items.map(item => `<div style="flex:1;min-width:0;text-align:center"><img src="${escapeAttr(item.src)}" style="max-width:100%;max-height:96px;border-radius:8px;margin-bottom:6px;object-fit:cover"><br><span style="font-size:11px;color:#16a34a;font-weight:600;word-break:break-all">✅ ${escapeHtml(item.file.name)}</span></div>`).join('');
+    area.innerHTML = `<div style="display:flex;gap:8px;align-items:flex-start">${thumbs}</div><input type="file" id="imgFileInput" accept="image/png,image/jpeg,image/gif,image/webp" onchange="handleImgFile(this)" style="display:none" multiple>`;
+  });
 }
 // Show/hide border color pickers when border width > 0
 document.addEventListener('DOMContentLoaded', () => {
@@ -740,23 +767,37 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 function doInsertImage() {
-  let src = pendingImgData || $('imgUrlInput').value.trim();
-  src = sanitizeImageSrc(src);
-  if (!src) { alert('请选择安全的图片，或输入 http/https 图片URL'); return; }
+  const layout = $('imgLayout')?.value || 'single';
+  const isDouble = layout === 'double';
+  let srcList = pendingImgData.length ? pendingImgData.slice(0, isDouble ? 2 : 1) : [
+    sanitizeImageSrc($('imgUrlInput').value.trim()),
+    sanitizeImageSrc($('imgUrlInput2')?.value.trim())
+  ].filter(Boolean).slice(0, isDouble ? 2 : 1);
+  if (!srcList.length) { alert('请选择安全的图片，或输入 http/https 图片URL'); return; }
+  if (isDouble && srcList.length < 2) { alert('双图并排需要选择或输入2张图片'); return; }
   const align = $('imgAlign').value;
   const w = clampNumber($('imgWidth').value, 10, 100, 100);
   const radius = clampNumber($('imgRadius').value, 0, 50, 12);
   const borderW = clampNumber($('imgBorderW').value, 0, 10, 0);
-  let style = `max-width:${w}%;border-radius:${radius}px;height:auto;`;
+  let baseStyle = `max-width:${isDouble ? 100 : w}%;border-radius:${radius}px;height:auto;`;
   if (borderW > 0) {
     const c1 = sanitizeColorValue($('imgBorderC1').value, '#E5E7EB');
     const c2 = sanitizeColorValue($('imgBorderC2').value, '#0066FF');
-    style = `max-width:${w}%;border-radius:${radius}px;height:auto;border:${borderW}px solid transparent;background-clip:padding-box;box-shadow:0 0 0 ${borderW}px ${c1},inset 0 0 0 0 transparent;background-image:linear-gradient(white,white),linear-gradient(135deg,${c1},${c2});background-origin:border-box;background-clip:padding-box,border-box;`;
+    baseStyle = `max-width:${isDouble ? 100 : w}%;border-radius:${radius}px;height:auto;border:${borderW}px solid transparent;background-clip:padding-box;box-shadow:0 0 0 ${borderW}px ${c1},inset 0 0 0 0 transparent;background-image:linear-gradient(white,white),linear-gradient(135deg,${c1},${c2});background-origin:border-box;background-clip:padding-box,border-box;`;
   }
-  if (align === 'center') style += 'display:block;margin:12px auto;';
-  else if (align === 'right') style += 'display:block;margin:12px 0 12px auto;';
-  else style += 'display:block;margin:12px auto 12px 0;';
-  const imgHtml = `<img src="${escapeAttr(src)}" style="${escapeAttr(style)}" alt="image"><br>`;
+  let imgHtml = '';
+  if (isDouble) {
+    const groupMargin = align === 'right' ? '12px 0 12px auto' : align === 'left' ? '12px auto 12px 0' : '12px auto';
+    const groupWidth = `${w}%`;
+    const cells = srcList.map((src, idx) => `<div style="flex:1;min-width:0;"><img src="${escapeAttr(src)}" style="${escapeAttr(baseStyle + 'display:block;width:100%;margin:0;object-fit:cover;')}" alt="image ${idx + 1}"></div>`).join('');
+    imgHtml = `<div data-layout="image-pair" style="display:flex;gap:8px;align-items:flex-start;width:${groupWidth};max-width:100%;margin:${groupMargin};">${cells}</div><p><br></p>`;
+  } else {
+    let style = baseStyle;
+    if (align === 'center') style += 'display:block;margin:12px auto;';
+    else if (align === 'right') style += 'display:block;margin:12px 0 12px auto;';
+    else style += 'display:block;margin:12px auto 12px 0;';
+    imgHtml = `<img src="${escapeAttr(srcList[0])}" style="${escapeAttr(style)}" alt="image"><br>`;
+  }
   // Restore focus and cursor to editor before inserting
   editor.focus();
   if (savedEditorRange) {
@@ -773,14 +814,15 @@ function doInsertImage() {
     sel.removeAllRanges();
     sel.addRange(range);
   }
-  document.execCommand('insertHTML', false, imgHtml);
+  insertSafeHTML(imgHtml);
   $('imgPanel').classList.remove('show');
-  pendingImgData = null;
+  pendingImgData = [];
   $('imgUrlInput').value = '';
+  if ($('imgUrlInput2')) $('imgUrlInput2').value = '';
   // Reset upload area
   const uploadArea = $('imgTabUpload');
   if (uploadArea) {
-    uploadArea.innerHTML = `<div class="img-upload-area" onclick="document.getElementById('imgFileInput').click()">点击选择图片 或 拖拽到此处<input type="file" id="imgFileInput" accept="image/png,image/jpeg,image/gif,image/webp" onchange="handleImgFile(this)"></div>`;
+    uploadArea.innerHTML = `<div class="img-upload-area" onclick="document.getElementById('imgFileInput').click()">点击选择图片，双图并排可一次选择2张<input type="file" id="imgFileInput" accept="image/png,image/jpeg,image/gif,image/webp" onchange="handleImgFile(this)" multiple></div>`;
   }
   scheduleUpdate();
 }
