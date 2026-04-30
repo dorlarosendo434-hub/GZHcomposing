@@ -604,7 +604,7 @@ const DROP_HTML_TAGS = new Set(['SCRIPT','STYLE','LINK','META','IFRAME','OBJECT'
 const SAFE_STYLE_PROPS = new Set([
   'color','background','background-color','background-image','background-size','background-clip','background-origin',
   'border','border-left','border-right','border-top','border-bottom','border-radius','border-image',
-  'box-shadow','display','align-items','justify-content','gap','flex','flex-shrink',
+  'box-shadow','box-sizing','display','align-items','justify-content','gap','column-gap','flex','flex-shrink',
   'width','height','max-width','min-width','max-height','margin','margin-top','margin-right','margin-bottom','margin-left',
   'padding','padding-top','padding-right','padding-bottom','padding-left','text-align','font-size','font-weight',
   'font-style','font-family','line-height','letter-spacing','text-indent','opacity','position','left','right','top','bottom',
@@ -699,6 +699,44 @@ function insertSafeHTML(html) {
 // ===================================================================
 let pendingImgData = [];
 let savedEditorRange = null;
+function getValidImageFiles(files, limit = Infinity) {
+  const list = Array.from(files || []).filter(Boolean).slice(0, limit);
+  const badFile = list.find(file => !/^image\/(?:png|jpe?g|gif|webp)$/i.test(file.type));
+  if (badFile) {
+    alert('仅支持 PNG、JPG、GIF、WebP 图片，已拦截不安全格式');
+    return null;
+  }
+  const largeFile = list.find(file => file.size > 10 * 1024 * 1024);
+  if (largeFile) {
+    alert('单张图片不能超过 10MB');
+    return null;
+  }
+  return list;
+}
+function readImageFiles(files) {
+  return Promise.all(files.map(file => new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => resolve({ file, src: sanitizeImageSrc(e.target.result) });
+    reader.onerror = () => resolve({ file, src: '' });
+    reader.readAsDataURL(file);
+  })));
+}
+function restoreEditorRange(range) {
+  editor.focus();
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  if (range) {
+    sel.addRange(range);
+    return;
+  }
+  const fallback = document.createRange();
+  fallback.selectNodeContents(editor);
+  fallback.collapse(false);
+  sel.addRange(fallback);
+}
+function buildSingleImageHTML(src) {
+  return `<img src="${escapeAttr(src)}" style="max-width:100%;border-radius:12px;height:auto;display:block;margin:12px auto;" alt="image"><br>`;
+}
 function toggleImgPanel() {
   // Save cursor position before opening panel
   const sel = window.getSelection();
@@ -727,26 +765,12 @@ function switchImgLayout(layout) {
   }
 }
 function handleImgFile(input) {
-  const files = Array.from(input.files || []).slice(0, 2);
-  if (!files.length) return;
-  const badFile = files.find(file => !/^image\/(?:png|jpe?g|gif|webp)$/i.test(file.type));
-  if (badFile) {
-    alert('仅支持 PNG、JPG、GIF、WebP 图片，已拦截不安全格式');
+  const files = getValidImageFiles(input.files, 2);
+  if (!files || !files.length) {
     input.value = '';
     return;
   }
-  const largeFile = files.find(file => file.size > 10 * 1024 * 1024);
-  if (largeFile) {
-    alert('单张图片不能超过 10MB');
-    input.value = '';
-    return;
-  }
-  Promise.all(files.map(file => new Promise(resolve => {
-    const reader = new FileReader();
-    reader.onload = e => resolve({ file, src: sanitizeImageSrc(e.target.result) });
-    reader.onerror = () => resolve({ file, src: '' });
-    reader.readAsDataURL(file);
-  }))).then(items => {
+  readImageFiles(files).then(items => {
     pendingImgData = items.map(item => item.src).filter(Boolean);
     if (pendingImgData.length !== files.length) {
       alert('图片读取失败或格式不安全');
@@ -789,8 +813,8 @@ function doInsertImage() {
   if (isDouble) {
     const groupMargin = align === 'right' ? '12px 0 12px auto' : align === 'left' ? '12px auto 12px 0' : '12px auto';
     const groupWidth = `${w}%`;
-    const cells = srcList.map((src, idx) => `<div style="flex:1;min-width:0;"><img src="${escapeAttr(src)}" style="${escapeAttr(baseStyle + 'display:block;width:100%;margin:0;object-fit:cover;')}" alt="image ${idx + 1}"></div>`).join('');
-    imgHtml = `<div data-layout="image-pair" style="display:flex;gap:8px;align-items:flex-start;width:${groupWidth};max-width:100%;margin:${groupMargin};">${cells}</div><p><br></p>`;
+    const cells = srcList.map((src, idx) => `<div style="flex:1;min-width:0;padding:${idx === 0 ? '0 0.5mm 0 0' : '0 0 0 0.5mm'};box-sizing:border-box;"><img src="${escapeAttr(src)}" style="${escapeAttr(baseStyle + 'display:block;width:100%;margin:0;object-fit:cover;box-sizing:border-box;')}" alt="image ${idx + 1}"></div>`).join('');
+    imgHtml = `<div data-layout="image-pair" style="display:flex;column-gap:1mm;align-items:flex-start;width:${groupWidth};max-width:100%;margin:${groupMargin};box-sizing:border-box;">${cells}</div><p><br></p>`;
   } else {
     let style = baseStyle;
     if (align === 'center') style += 'display:block;margin:12px auto;';
@@ -1183,8 +1207,36 @@ function inlineFormat(t) {
 // ===================================================================
 // PASTE HANDLER: detect markdown
 // ===================================================================
+function getClipboardImageFiles(clipboardData) {
+  const fromItems = Array.from(clipboardData?.items || [])
+    .filter(item => item.kind === 'file' && /^image\//i.test(item.type))
+    .map(item => item.getAsFile())
+    .filter(Boolean);
+  if (fromItems.length) return fromItems;
+  return Array.from(clipboardData?.files || []).filter(file => /^image\//i.test(file.type));
+}
 function setupEditorEvents() {
   editor.addEventListener('paste', e => {
+    const imageFiles = getClipboardImageFiles(e.clipboardData);
+    if (imageFiles.length) {
+      e.preventDefault();
+      const files = getValidImageFiles(imageFiles);
+      if (!files || !files.length) return;
+      const pasteRange = window.getSelection().rangeCount
+        ? window.getSelection().getRangeAt(0).cloneRange()
+        : null;
+      readImageFiles(files).then(items => {
+        const safeItems = items.filter(item => item.src);
+        if (safeItems.length !== files.length) {
+          alert('图片读取失败或格式不安全');
+          return;
+        }
+        restoreEditorRange(pasteRange);
+        insertSafeHTML(safeItems.map(item => buildSingleImageHTML(item.src)).join(''));
+        scheduleUpdate();
+      });
+      return;
+    }
     const plain = e.clipboardData.getData('text/plain');
     const html = e.clipboardData.getData('text/html');
     e.preventDefault();
