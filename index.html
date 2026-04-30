@@ -263,6 +263,7 @@ input,select,textarea{font-family:inherit;font-size:inherit}
       <button class="tb-btn" title="文字高亮" onclick="applyTextHighlight()" id="btnHighlight" style="font-size:13px">🖍</button>
       <button class="tb-btn" title="插入编号标题" onclick="insertNumberedHeading()" style="font-size:12px">01§</button>
       <button class="tb-btn" title="插入提示卡片" onclick="insertTipCard()" style="font-size:13px">📋</button>
+      <button class="tb-btn" title="设计排版组件" onclick="showDesignLayoutPanel()" style="font-size:12px;width:auto;padding:0 10px">🎛设计</button>
       <span class="tb-sep"></span>
       <button class="tb-btn" title="插入结尾" onclick="showEndingPanel()" style="font-size:12px">📝结尾</button>
       <span class="tb-sep"></span>
@@ -467,8 +468,7 @@ const MODES = [
 // ===================================================================
 // DEFAULT CONTENT
 // ===================================================================
-const DEFAULT_HTML = `<h1>欢迎使用公众号智能排版器</h1>
-<p>支持 <strong>8种排版模式</strong>、6种标题字体、4种正文字体、9套配色方案。每种模式都配备了现代感的渐变装饰条、精致引用卡片和细腻的排版细节，让每篇文章都充满设计感。</p>
+const DEFAULT_HTML = `<p>支持 <strong>8种排版模式</strong>、6种标题字体、4种正文字体、9套配色方案。每种模式都配备了现代感的渐变装饰条、精致引用卡片和细腻的排版细节，让每篇文章都充满设计感。</p>
 <h2>排版模式一览</h2>
 <p>点击顶部「排版模式」切换风格。每种模式包含完整的字体、配色、标题渐变装饰、引用卡片和分割线组合：</p>
 <ul>
@@ -598,16 +598,16 @@ function sanitizeImageSrc(src) {
 
 const SAFE_HTML_TAGS = new Set([
   'P','BR','STRONG','B','EM','I','U','S','H1','H2','H3','BLOCKQUOTE','UL','OL','LI',
-  'PRE','CODE','HR','DIV','SPAN','IMG','A'
+  'PRE','CODE','HR','DIV','SECTION','SPAN','IMG','A'
 ]);
 const DROP_HTML_TAGS = new Set(['SCRIPT','STYLE','LINK','META','IFRAME','OBJECT','EMBED','FORM','INPUT','BUTTON','TEXTAREA','SELECT','OPTION']);
 const SAFE_STYLE_PROPS = new Set([
   'color','background','background-color','background-image','background-size','background-clip','background-origin',
   'border','border-left','border-right','border-top','border-bottom','border-radius','border-image',
-  'box-shadow','box-sizing','display','align-items','justify-content','gap','column-gap','flex','flex-shrink',
+  'box-shadow','box-sizing','display','align-items','justify-content','gap','column-gap','flex','flex-shrink','flex-wrap',
   'width','height','max-width','min-width','max-height','margin','margin-top','margin-right','margin-bottom','margin-left',
   'padding','padding-top','padding-right','padding-bottom','padding-left','text-align','font-size','font-weight',
-  'font-style','font-family','line-height','letter-spacing','text-indent','opacity','position','left','right','top','bottom',
+  'font-style','font-family','line-height','letter-spacing','text-indent','text-decoration','opacity','position','left','right','top','bottom',
   'vertical-align','overflow','overflow-wrap','word-wrap','text-transform'
 ]);
 function isSafeCssValue(value) {
@@ -904,6 +904,136 @@ function insertTipCard() {
     <div data-theme-role="body" style="font-size:14px;color:${textColor};line-height:1.8;">在此输入提示内容</div>
   </div><p><br></p>`;
   document.execCommand('insertHTML', false, html);
+  editor.focus();
+  scheduleUpdate();
+}
+
+// ===================================================================
+// DESIGN LAYOUT COMPONENTS
+// ===================================================================
+let _designSectionCounter = 0;
+function showDesignLayoutPanel() {
+  const c = getColors();
+  const main = c.main || '#059669';
+  showModal(`
+    <h3>设计排版组件</h3>
+    <p style="font-size:12px;color:#999;margin-bottom:16px">复刻品牌实战类文章结构：开头总结框、小标题和结尾。</p>
+    <div style="display:grid;grid-template-columns:1fr;gap:10px">
+      <div style="border:2px solid #e5e7eb;border-radius:8px;padding:14px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='${main}'" onmouseout="this.style.borderColor='#e5e7eb'" onclick="insertDesignIntro()">
+        <div style="font-size:13px;font-weight:700;color:${main};margin-bottom:4px">开头总结框</div>
+        <div style="font-size:11px;color:#999">适合放文章节点、关键词、教程目录和一句话主题</div>
+      </div>
+      <div style="border:2px solid #e5e7eb;border-radius:8px;padding:14px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='${main}'" onmouseout="this.style.borderColor='#e5e7eb'" onclick="insertDesignHeading()">
+        <div style="font-size:13px;font-weight:700;color:${main};margin-bottom:4px">设计小标题</div>
+        <div style="font-size:11px;color:#999">左侧大编号 + PART，右侧标题 + 英文副标题</div>
+      </div>
+      <div style="border:2px solid #e5e7eb;border-radius:8px;padding:14px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='${main}'" onmouseout="this.style.borderColor='#e5e7eb'" onclick="insertDesignEnding()">
+        <div style="font-size:13px;font-weight:700;color:${main};margin-bottom:4px">设计结尾</div>
+        <div style="font-size:11px;color:#999">/// LAST 标题、强调句、总结卡和互动引导</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="hideModal()">取消</button>
+    </div>
+  `);
+}
+function insertDesignIntro() {
+  const c = getColors();
+  const main = c.main || '#059669';
+  const accent = c.accent || main;
+  const sub = c.sub || '#ECFDF5';
+  const text = c.text || '#374151';
+  const html = `<section data-theme-component="design-intro" style="margin:0 0 32px;background:#fff;border:1.5px solid ${alphaColor(main,0.16,'#d1fae5')};border-radius:20px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.06);width:100%;">
+    <section style="padding:28px 24px 24px;">
+      <section style="display:flex;align-items:center;gap:8px;margin-bottom:22px;">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${main};"></span>
+        <span data-theme-role="meta" style="font-size:11px;color:${main};font-weight:800;letter-spacing:1.8px;text-transform:uppercase;">DESIGN · CASE STUDY</span>
+        <span style="margin-left:auto;font-size:11px;color:#9CA3AF;">2026</span>
+      </section>
+      <section style="display:flex;align-items:center;gap:18px;">
+        <section style="flex:1;min-width:0;">
+          <p style="font-size:14px;color:#D1D5DB;margin:0 0 6px;text-decoration:line-through;letter-spacing:0.5px;">把内容散着写？</p>
+          <p data-theme-role="title" style="font-size:24px;font-weight:900;color:${text};margin:0;line-height:1.08;letter-spacing:0;">一篇文章</p>
+          <p data-theme-role="highlight" style="font-size:24px;font-weight:900;color:${main};margin:0 0 14px;line-height:1.08;letter-spacing:0;">讲清一个流程</p>
+          <p data-theme-role="body" style="font-size:13px;color:#9CA3AF;margin:0;line-height:1.7;letter-spacing:0.5px;">节点 · 关键词 · 结论</p>
+        </section>
+        <section data-theme-role="badge" style="width:108px;height:108px;border-radius:18px;background:linear-gradient(135deg,${alphaColor(main,0.14,sub)},${alphaColor(accent,0.12,'#fff')});display:flex;align-items:center;justify-content:center;text-align:center;flex-shrink:0;">
+          <span style="font-size:15px;font-weight:900;color:${main};line-height:1.4;">设计<br>排版</span>
+        </section>
+      </section>
+    </section>
+    <section data-theme-role="bar" style="background:linear-gradient(135deg,${main},${accent});padding:12px 24px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:12px;color:rgba(255,255,255,0.9);font-weight:700;letter-spacing:0.5px;">文章节点</span>
+      <span style="font-size:12px;color:rgba(255,255,255,0.75);letter-spacing:1px;">KEYWORDS</span>
+    </section>
+    <section style="padding:16px 20px 20px;">
+      <section style="display:flex;gap:8px;flex-wrap:wrap;">
+        <span data-theme-role="chip-main" style="display:inline-block;background:${main};color:#fff;border-radius:12px;padding:10px 12px;font-size:12px;font-weight:800;">PART 01 · 背景</span>
+        <span data-theme-role="chip" style="display:inline-block;background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:10px 12px;font-size:12px;font-weight:800;color:${text};">PART 02 · 方法</span>
+        <span data-theme-role="chip" style="display:inline-block;background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:10px 12px;font-size:12px;font-weight:800;color:${text};">PART 03 · 案例</span>
+        <span data-theme-role="chip" style="display:inline-block;background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:10px 12px;font-size:12px;font-weight:800;color:${text};">OUTRO · 总结</span>
+      </section>
+    </section>
+  </section><p><br></p>`;
+  insertSafeHTML(html);
+  hideModal();
+  editor.focus();
+  scheduleUpdate();
+}
+function insertDesignHeading() {
+  _designSectionCounter++;
+  const c = getColors();
+  const main = c.main || '#059669';
+  const text = c.text || '#111827';
+  const num = String(_designSectionCounter).padStart(2, '0');
+  const html = `<section data-theme-component="design-heading" style="display:flex;align-items:center;gap:16px;margin:36px 0 24px;">
+    <section style="text-align:center;flex-shrink:0;min-width:44px;">
+      <p data-theme-role="number" style="margin:0;font-size:28px;font-weight:900;color:${main};line-height:1;letter-spacing:-1px;">${num}</p>
+      <p data-theme-role="label" style="margin:0;font-size:8px;font-weight:800;color:#D1D5DB;letter-spacing:2px;">PART</p>
+    </section>
+    <section style="min-width:0;">
+      <p data-theme-role="title" style="margin:0 0 1px;font-size:17px;font-weight:900;color:${text};letter-spacing:0.3px;line-height:1.45;">在此输入小标题</p>
+      <p data-theme-role="subtitle" style="margin:0;font-size:11px;font-weight:700;color:#9CA3AF;letter-spacing:1.5px;line-height:1.5;">KEYWORD · 在此输入副标题</p>
+    </section>
+  </section>`;
+  insertSafeHTML(html);
+  hideModal();
+  editor.focus();
+  scheduleUpdate();
+}
+function insertDesignEnding() {
+  const c = getColors();
+  const main = c.main || '#059669';
+  const accent = c.accent || main;
+  const text = c.text || '#111827';
+  const html = `<section data-theme-component="design-ending" style="margin:48px 0 32px;padding:0 4px;">
+    <section style="display:flex;align-items:center;gap:16px;margin-bottom:22px;">
+      <section style="text-align:center;flex-shrink:0;min-width:54px;">
+        <p data-theme-role="number" style="margin:0;font-size:28px;font-weight:900;color:${main};line-height:1;letter-spacing:-1px;">///</p>
+        <p data-theme-role="label" style="margin:0;font-size:8px;font-weight:800;color:#D1D5DB;letter-spacing:2px;">LAST</p>
+      </section>
+      <section style="min-width:0;">
+        <p data-theme-role="title" style="margin:0 0 1px;font-size:17px;font-weight:900;color:${text};letter-spacing:0.3px;line-height:1.45;">写在最后</p>
+        <p data-theme-role="subtitle" style="margin:0;font-size:11px;font-weight:700;color:#9CA3AF;letter-spacing:1.5px;line-height:1.5;">OUTRO · 一句话总结</p>
+      </section>
+    </section>
+    <p data-theme-role="quote" style="font-size:14px;margin:0 0 20px;text-align:center;color:${main};font-weight:800;letter-spacing:1px;border-top:1px solid #F3F4F6;border-bottom:1px solid #F3F4F6;padding:12px 0;">把复杂流程，变成可以复用的方法</p>
+    <section data-theme-role="summary" style="background:#fff;border-radius:12px;padding:16px 20px;box-shadow:0 4px 16px ${alphaColor(main,0.12,'rgba(0,0,0,0.08)')};margin-bottom:24px;text-align:center;">
+      <p style="font-size:13px;color:#9CA3AF;margin:0 0 6px;line-height:1.5;">说到底</p>
+      <p data-theme-role="summary-title" style="margin:0;line-height:1.6;font-weight:800;color:${text};">这一套设计排版，是为了让读者快速抓住重点</p>
+    </section>
+    <section data-theme-role="action" style="background:radial-gradient(circle at center,#F9FAFB 0%,#FFFFFF 100%);border:1px solid #E5E7EB;border-radius:16px;padding:30px 20px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.03);">
+      <p style="font-size:13px;font-weight:800;color:${text};margin:0 0 20px;line-height:1.6;">既然看到这里了，如果觉得有用，随手点个赞、在看、转发三连吧。</p>
+      <section style="display:flex;justify-content:center;gap:24px;margin-bottom:16px;">
+        <span style="text-align:center;color:#4B5563;font-size:13px;">点赞</span>
+        <span style="text-align:center;color:#4B5563;font-size:13px;">在看</span>
+        <span data-theme-role="share" style="text-align:center;color:${main};font-size:13px;font-weight:800;">转发</span>
+      </section>
+      <p style="font-size:10px;color:#9CA3AF;letter-spacing:1px;margin:0;">THANKS FOR READING</p>
+    </section>
+  </section><p><br></p>`;
+  insertSafeHTML(html);
+  hideModal();
   editor.focus();
   scheduleUpdate();
 }
@@ -1336,17 +1466,14 @@ function applyPreviewStyles() {
     }
   });
 
-  // Opening paragraph style (first p right after h1)
-  const h1 = preview.querySelector('h1');
-  if (h1) {
-    const nextEl = h1.nextElementSibling;
-    if (nextEl && nextEl.tagName === 'P') {
-      nextEl.style.fontSize = '15.5px';
-      nextEl.style.color = c.accent;
-      nextEl.style.opacity = '0.85';
-      nextEl.style.lineHeight = '1.9';
-      nextEl.style.marginBottom = (STATE.paraSpacing + 0.3) + 'em';
-    }
+  // Opening paragraph style is independent from whether the article has a title.
+  const openingP = Array.from(preview.children).find(el => el.tagName === 'P');
+  if (openingP) {
+    openingP.style.fontSize = '15.5px';
+    openingP.style.color = c.accent;
+    openingP.style.opacity = '0.85';
+    openingP.style.lineHeight = '1.9';
+    openingP.style.marginBottom = (STATE.paraSpacing + 0.3) + 'em';
   }
 
   // Closing section style (last p or p after last hr)
@@ -1414,15 +1541,6 @@ function applyPreviewStyles() {
       h.style.paddingLeft = '16px';
       h.style.borderLeft = '4px solid transparent';
       h.style.borderImage = `linear-gradient(180deg, ${c.main}, ${c.accent}) 1`;
-    }
-    // Sweet: emoji decoration before title
-    if (mode.id === 'sweet') {
-      const emojis = ['✨','🌸','💖','⭐','🌿','💫'];
-      const emojiIdx = Array.from(preview.querySelectorAll('h1,h2,h3')).indexOf(h) % emojis.length;
-      if (!h.dataset.emojiAdded) {
-        h.innerHTML = emojis[emojiIdx] + ' ' + h.innerHTML;
-        h.dataset.emojiAdded = '1';
-      }
     }
     // Chinese: traditional wide spacing
     if (mode.id === 'chinese') {
@@ -1590,6 +1708,62 @@ function applyThemedComponents(c) {
     const body = el.querySelector('[data-theme-role="body"]');
     if (title) title.style.color = main;
     if (body) body.style.color = text;
+  });
+
+  preview.querySelectorAll('[data-theme-component="design-intro"]').forEach(el => {
+    el.style.borderColor = alphaColor(main, 0.16, '#d1fae5');
+    const meta = el.querySelector('[data-theme-role="meta"]');
+    const highlight = el.querySelector('[data-theme-role="highlight"]');
+    const badge = el.querySelector('[data-theme-role="badge"]');
+    const bar = el.querySelector('[data-theme-role="bar"]');
+    const chipMain = el.querySelector('[data-theme-role="chip-main"]');
+    const chips = el.querySelectorAll('[data-theme-role="chip"]');
+    const title = el.querySelector('[data-theme-role="title"]');
+    const body = el.querySelector('[data-theme-role="body"]');
+    if (meta) meta.style.color = main;
+    if (highlight) highlight.style.color = main;
+    if (badge) badge.style.background = `linear-gradient(135deg, ${alphaColor(main,0.14,sub)}, ${alphaColor(accent,0.12,'#fff')})`;
+    if (bar) bar.style.background = grad;
+    if (chipMain) {
+      chipMain.style.background = main;
+      chipMain.style.color = '#fff';
+    }
+    chips.forEach(chip => {
+      chip.style.color = text;
+      chip.style.borderColor = alphaColor(main, 0.14, '#E5E7EB');
+    });
+    if (title) title.style.color = text;
+    if (body) body.style.color = '#9CA3AF';
+  });
+
+  preview.querySelectorAll('[data-theme-component="design-heading"]').forEach(el => {
+    const num = el.querySelector('[data-theme-role="number"]');
+    const label = el.querySelector('[data-theme-role="label"]');
+    const title = el.querySelector('[data-theme-role="title"]');
+    const subtitle = el.querySelector('[data-theme-role="subtitle"]');
+    if (num) num.style.color = main;
+    if (label) label.style.color = '#D1D5DB';
+    if (title) title.style.color = text;
+    if (subtitle) subtitle.style.color = '#9CA3AF';
+  });
+
+  preview.querySelectorAll('[data-theme-component="design-ending"]').forEach(el => {
+    const num = el.querySelector('[data-theme-role="number"]');
+    const label = el.querySelector('[data-theme-role="label"]');
+    const title = el.querySelector('[data-theme-role="title"]');
+    const subtitle = el.querySelector('[data-theme-role="subtitle"]');
+    const quote = el.querySelector('[data-theme-role="quote"]');
+    const summary = el.querySelector('[data-theme-role="summary"]');
+    const summaryTitle = el.querySelector('[data-theme-role="summary-title"]');
+    const share = el.querySelector('[data-theme-role="share"]');
+    if (num) num.style.color = main;
+    if (label) label.style.color = '#D1D5DB';
+    if (title) title.style.color = text;
+    if (subtitle) subtitle.style.color = '#9CA3AF';
+    if (quote) quote.style.color = main;
+    if (summary) summary.style.boxShadow = `0 4px 16px ${alphaColor(main,0.12,'rgba(0,0,0,0.08)')}`;
+    if (summaryTitle) summaryTitle.style.color = text;
+    if (share) share.style.color = main;
   });
 
   preview.querySelectorAll('[data-theme-component="ending"]').forEach(block => {
