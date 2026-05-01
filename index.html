@@ -383,7 +383,8 @@ const COLOR_SCHEMES = [
   { name:'优雅紫', main:'#7C3AED', sub:'#F5F3FF', accent:'#5B21B6', text:'#1E1B4B', bg:'#FFFFFF', gradient:'linear-gradient(135deg,#7C3AED,#EC4899)' },
   { name:'莫兰迪', main:'#9CA3AF', sub:'#F9FAFB', accent:'#6B7280', text:'#4B5563', bg:'#FAFAFA', gradient:'linear-gradient(135deg,#9CA3AF,#D1D5DB)' },
   { name:'马卡龙', main:'#F472B6', sub:'#FDF2F8', accent:'#38BDF8', text:'#475569', bg:'#FFFFFE', gradient:'linear-gradient(135deg,#F472B6,#38BDF8)' },
-  { name:'深海蓝', main:'#1E3A5F', sub:'#F0F4F8', accent:'#0F172A', text:'#1E293B', bg:'#FFFFFF', gradient:'linear-gradient(135deg,#1E3A5F,#3B82F6)' }
+  { name:'深海蓝', main:'#1E3A5F', sub:'#F0F4F8', accent:'#0F172A', text:'#1E293B', bg:'#FFFFFF', gradient:'linear-gradient(135deg,#1E3A5F,#3B82F6)' },
+  { name:'马里奥', main:'#E53935', sub:'#E3F2FD', accent:'#FBC02D', text:'#1F2937', bg:'#FFFFFF', gradient:'linear-gradient(135deg,#E53935 0%,#FBC02D 52%,#43A047 100%)', pipe:'#43A047', sky:'#1E88E5' }
 ];
 
 // ===================================================================
@@ -462,13 +463,22 @@ const MODES = [
     headingStyle:'numbered-divider',
     quoteStyle:'navy-highlight',
     hrStyle:'none'
+  },
+  {
+    id:'mario-theme', name:'马里奥主题',
+    desc:'红蓝黄绿 · 游戏感',
+    titleFont:1, bodyFont:1, color:9,
+    lineHeight:1.9, paraSpacing:1.0,
+    headingStyle:'mario-block',
+    quoteStyle:'mario-card',
+    hrStyle:'mario-coins'
   }
 ];
 
 // ===================================================================
 // DEFAULT CONTENT
 // ===================================================================
-const DEFAULT_HTML = `<p>支持 <strong>8种排版模式</strong>、6种标题字体、4种正文字体、9套配色方案。每种模式都配备了现代感的渐变装饰条、精致引用卡片和细腻的排版细节，让每篇文章都充满设计感。</p>
+const DEFAULT_HTML = `<p>支持 <strong>9种排版模式</strong>、6种标题字体、4种正文字体、10套配色方案。每种模式都配备了现代感的渐变装饰条、精致引用卡片和细腻的排版细节，让每篇文章都充满设计感。</p>
 <h2>排版模式一览</h2>
 <p>点击顶部「排版模式」切换风格。每种模式包含完整的字体、配色、标题渐变装饰、引用卡片和分割线组合：</p>
 <ul>
@@ -480,6 +490,7 @@ const DEFAULT_HTML = `<p>支持 <strong>8种排版模式</strong>、6种标题�
 <li><strong>品牌商务</strong> — 底部渐变条 + 稳重专业</li>
 <li><strong>极简留白</strong> — 微妙侧边线 + 超宽行距留白</li>
 <li><strong>知识博主</strong> — 渐变编号标题 + 深海蓝卡片</li>
+<li><strong>马里奥主题</strong> — 红蓝黄绿主题色 + 金币编号与游戏感卡片</li>
 </ul>
 <blockquote>好的排版不仅是视觉上的美感，更是对读者阅读体验的尊重。每一处渐变、每一个圆角、每一个间距都在传达用心。</blockquote>
 <h2>特色工具</h2>
@@ -1444,6 +1455,8 @@ function applyPreviewStyles() {
   const tf = TITLE_FONTS[STATE.titleFont];
   const bf = BODY_FONTS[STATE.bodyFont];
   const mode = MODES.find(m => m.id === STATE.mode) || MODES[0];
+  const themePipe = c.pipe || c.main;
+  const themeSky = c.sky || c.main;
 
   // Base
   preview.style.fontFamily = bf.stack;
@@ -1474,6 +1487,17 @@ function applyPreviewStyles() {
     openingP.style.opacity = '0.85';
     openingP.style.lineHeight = '1.9';
     openingP.style.marginBottom = (STATE.paraSpacing + 0.3) + 'em';
+    if (mode.id === 'mario-theme') {
+      openingP.style.background = `radial-gradient(circle at 18px 18px, ${c.accent} 0 5px, transparent 6px), radial-gradient(circle at 50px 18px, ${c.accent} 0 5px, transparent 6px), linear-gradient(180deg, ${c.sub}, #FFFFFF)`;
+      openingP.style.border = `2px solid ${alphaColor(c.main, 0.32, '#f3b2b2')}`;
+      openingP.style.borderBottom = `6px solid ${themePipe}`;
+      openingP.style.borderRadius = '16px';
+      openingP.style.boxShadow = `0 8px 0 ${alphaColor(c.main, 0.14, 'rgba(229,57,53,0.14)')}`;
+      openingP.style.color = c.text;
+      openingP.style.fontWeight = '600';
+      openingP.style.padding = '44px 20px 18px';
+      openingP.style.opacity = '1';
+    }
   }
 
   // Closing section style (last p or p after last hr)
@@ -1586,6 +1610,19 @@ function applyPreviewStyles() {
       bq.style.borderRadius = '20px';
       bq.style.background = `linear-gradient(135deg, ${c.sub}, ${alphaColor(c.accent, 0.12, c.bg)})`;
     }
+    // Mario theme: make quotes feel like playful information cards.
+    if (mode.id === 'mario-theme') {
+      bq.style.borderRadius = '16px';
+      bq.style.border = `2px solid ${c.main}`;
+      bq.style.borderLeft = `8px solid ${c.main}`;
+      bq.style.background = `linear-gradient(180deg, ${c.sub}, #FFFFFF)`;
+      bq.style.boxShadow = `0 6px 0 ${alphaColor(themeSky, 0.18, 'rgba(30,136,229,0.18)')}`;
+      bq.style.padding = '18px 20px 18px 22px';
+      if (!bq.dataset.marioQuoteAdded) {
+        bq.innerHTML = `<span style="display:inline-block;background:${c.accent};color:#111827;border:2px solid #111827;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:900;margin-bottom:10px;">重点提示</span><br>${bq.innerHTML}`;
+        bq.dataset.marioQuoteAdded = '1';
+      }
+    }
     // Chinese: classical border
     if (mode.id === 'chinese') {
       bq.style.border = '2px double ' + c.main + '60';
@@ -1655,6 +1692,11 @@ function applyPreviewStyles() {
       list.style.counterReset = 'tutorial-counter';
       list.style.paddingLeft = '0';
     }
+    if (mode.id === 'mario-theme') {
+      list.style.listStyle = 'none';
+      list.style.paddingLeft = '0';
+      list.style.margin = '1.2em 0';
+    }
   });
   preview.querySelectorAll('li').forEach((li, liIdx) => {
     li.style.marginBottom = '0.4em';
@@ -1672,6 +1714,20 @@ function applyPreviewStyles() {
         li.dataset.numAdded = '1';
       }
     }
+    if (mode.id === 'mario-theme') {
+      li.style.position = 'relative';
+      li.style.marginBottom = '10px';
+      li.style.padding = '12px 14px 12px 52px';
+      li.style.border = `2px solid ${alphaColor(themeSky, 0.28, '#bbdefb')}`;
+      li.style.borderRadius = '12px';
+      li.style.background = '#FFFFFF';
+      li.style.boxShadow = `0 4px 0 ${alphaColor(c.accent, 0.35, 'rgba(251,192,45,0.35)')}`;
+      if (!li.dataset.marioCoinAdded) {
+        const num = String(liIdx + 1).padStart(2, '0');
+        li.innerHTML = `<span style="position:absolute;left:14px;top:12px;width:26px;height:26px;border-radius:50%;background:${c.accent};border:2px solid #111827;color:#111827;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;line-height:1;box-sizing:border-box;">${num}</span>${li.innerHTML}`;
+        li.dataset.marioCoinAdded = '1';
+      }
+    }
   });
 
   // Strong / em colors
@@ -1681,6 +1737,11 @@ function applyPreviewStyles() {
     img.style.maxWidth = img.style.maxWidth || '100%';
     img.style.borderRadius = '12px';
     img.style.height = 'auto';
+    if (mode.id === 'mario-theme') {
+      img.style.border = `3px solid ${themePipe}`;
+      img.style.boxShadow = `0 6px 0 ${alphaColor(themeSky, 0.18, 'rgba(30,136,229,0.18)')}`;
+      img.style.background = '#FFFFFF';
+    }
   });
   applyThemedComponents(c);
 }
@@ -1817,6 +1878,7 @@ function applyThemedComponents(c) {
 // ===================================================================
 function applyHeadingStyle(h, style, c, tag) {
   const grad = c.gradient || `linear-gradient(135deg, ${c.main}, ${c.accent})`;
+  const themeSky = c.sky || c.main;
   // Inject gradient bar via ::before pseudo-element using a wrapper span
   function addGradientBar(h, position, barW, barH, barRadius, gradient) {
     // Remove any existing bar
@@ -1919,6 +1981,27 @@ function applyHeadingStyle(h, style, c, tag) {
       h.style.textAlign = 'left';
       addGradientBar(h, 'left', '4px', '32px', '2px', grad);
       break;
+    case 'mario-block':
+      h.style.color = '#FFFFFF';
+      h.style.background = c.main;
+      h.style.borderRadius = '10px';
+      h.style.border = '2px solid #111827';
+      h.style.borderBottom = `6px solid ${c.accent}`;
+      h.style.boxShadow = `0 6px 0 ${alphaColor(themeSky, 0.22, 'rgba(30,136,229,0.22)')}`;
+      h.style.padding = tag === 'H1' ? '14px 16px' : '11px 14px';
+      h.style.display = 'flex';
+      h.style.alignItems = 'center';
+      h.style.gap = '10px';
+      h.style.textAlign = 'left';
+      h.style.letterSpacing = '0.02em';
+      h.style.fontSize = tag === 'H1' ? '22px' : tag === 'H2' ? '18px' : '16px';
+      if (!h.dataset.marioBadgeAdded) {
+        const allHeadings = Array.from(h.parentElement.querySelectorAll('h1,h2,h3'));
+        const num = String(allHeadings.indexOf(h) + 1).padStart(2, '0');
+        h.innerHTML = `<span style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:${c.accent};border:2px solid #111827;color:#111827;font-size:11px;font-weight:900;line-height:1;flex-shrink:0;box-sizing:border-box;">${num}</span><span style="min-width:0;">${h.innerHTML}</span>`;
+        h.dataset.marioBadgeAdded = '1';
+      }
+      break;
     case 'tag-badge':
       h.style.color = c.accent;
       h.style.fontWeight = '700';
@@ -1937,6 +2020,7 @@ function applyHeadingStyle(h, style, c, tag) {
 // ===================================================================
 function applyQuoteStyle(bq, style, c) {
   const grad = c.gradient || `linear-gradient(135deg, ${c.main}, ${c.accent})`;
+  const themeSky = c.sky || c.main;
   switch(style) {
     case 'blue-bar':
       bq.style.borderLeft = 'none';
@@ -2047,6 +2131,17 @@ function applyQuoteStyle(bq, style, c) {
       bq.style.lineHeight = '1.8';
       bq.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
       break;
+    case 'mario-card':
+      bq.style.border = `2px solid ${c.main}`;
+      bq.style.borderLeft = `8px solid ${c.main}`;
+      bq.style.background = `linear-gradient(180deg, ${c.sub}, #FFFFFF)`;
+      bq.style.padding = '18px 20px 18px 22px';
+      bq.style.borderRadius = '16px';
+      bq.style.color = c.text;
+      bq.style.fontSize = '14px';
+      bq.style.lineHeight = '1.85';
+      bq.style.boxShadow = `0 6px 0 ${alphaColor(themeSky, 0.18, 'rgba(30,136,229,0.18)')}`;
+      break;
   }
 }
 
@@ -2055,6 +2150,8 @@ function applyQuoteStyle(bq, style, c) {
 // ===================================================================
 function applyHrStyle(hr, style, c) {
   const grad = c.gradient || `linear-gradient(135deg, ${c.main}, ${c.accent})`;
+  const themePipe = c.pipe || c.main;
+  const themeSky = c.sky || c.main;
   hr.style.border = 'none';
   hr.style.height = 'auto';
   hr.style.overflow = 'visible';
@@ -2086,6 +2183,9 @@ function applyHrStyle(hr, style, c) {
       break;
     case 'chinese-pattern':
       hr.outerHTML = `<div style="text-align:center;margin:2em 0;display:flex;align-items:center;justify-content:center;gap:8px"><span style="width:16px;height:1px;background:${c.main}40"></span><span style="color:${c.main};font-size:10px;opacity:0.5">◆</span><span style="width:16px;height:1px;background:${c.main}40"></span><span style="color:${c.main};font-size:8px;opacity:0.35">◇</span><span style="width:16px;height:1px;background:${c.main}40"></span></div>`;
+      break;
+    case 'mario-coins':
+      hr.outerHTML = `<div style="margin:2.2em 0;display:flex;align-items:center;justify-content:center;gap:8px"><span style="flex:1;max-width:86px;height:4px;background:${themePipe};border-radius:999px;box-shadow:0 3px 0 ${alphaColor(themeSky,0.18,'rgba(30,136,229,0.18)')}"></span><span style="width:18px;height:18px;border-radius:50%;background:${c.accent};border:2px solid #111827;box-sizing:border-box;"></span><span style="width:18px;height:18px;border-radius:50%;background:${c.accent};border:2px solid #111827;box-sizing:border-box;"></span><span style="width:18px;height:18px;border-radius:50%;background:${c.accent};border:2px solid #111827;box-sizing:border-box;"></span><span style="flex:1;max-width:86px;height:4px;background:${themePipe};border-radius:999px;box-shadow:0 3px 0 ${alphaColor(themeSky,0.18,'rgba(30,136,229,0.18)')}"></span></div>`;
       break;
     case 'none':
       hr.style.display = 'none';
@@ -2677,9 +2777,9 @@ function showHelp() {
       </ul>
       <h4>🎨 排版</h4>
       <ul>
-        <li><strong>排版模式</strong>：8种预设模式一键切换</li>
+        <li><strong>排版模式</strong>：9种预设模式一键切换</li>
         <li><strong>字体</strong>：独立设置标题和正文字体</li>
-        <li><strong>配色</strong>：8种预设 + 自定义配色</li>
+        <li><strong>配色</strong>：10种预设 + 自定义配色</li>
         <li><strong>行距/段距</strong>：5档预设 + 自定义数值</li>
       </ul>
       <h4>📋 复制</h4>
