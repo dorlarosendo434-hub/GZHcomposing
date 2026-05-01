@@ -384,7 +384,8 @@ const COLOR_SCHEMES = [
   { name:'莫兰迪', main:'#9CA3AF', sub:'#F9FAFB', accent:'#6B7280', text:'#4B5563', bg:'#FAFAFA', gradient:'linear-gradient(135deg,#9CA3AF,#D1D5DB)' },
   { name:'马卡龙', main:'#F472B6', sub:'#FDF2F8', accent:'#38BDF8', text:'#475569', bg:'#FFFFFE', gradient:'linear-gradient(135deg,#F472B6,#38BDF8)' },
   { name:'深海蓝', main:'#1E3A5F', sub:'#F0F4F8', accent:'#0F172A', text:'#1E293B', bg:'#FFFFFF', gradient:'linear-gradient(135deg,#1E3A5F,#3B82F6)' },
-  { name:'马里奥', main:'#E53935', sub:'#E3F2FD', accent:'#FBC02D', text:'#1F2937', bg:'#FFFFFF', gradient:'linear-gradient(135deg,#E53935 0%,#FBC02D 52%,#43A047 100%)', pipe:'#43A047', sky:'#1E88E5' }
+  { name:'马里奥', main:'#E53935', sub:'#E3F2FD', accent:'#FBC02D', text:'#1F2937', bg:'#FFFFFF', gradient:'linear-gradient(135deg,#E53935 0%,#FBC02D 52%,#43A047 100%)', pipe:'#43A047', sky:'#1E88E5' },
+  { name:'手账咖啡', main:'#C8874E', sub:'#FFF6E8', accent:'#A6B68F', text:'#4A3A2A', bg:'#FFFBF4', gradient:'linear-gradient(135deg,#FFF6E8 0%,#DCC8A7 50%,#C8874E 100%)', paper:'#FFF6E8', rose:'#E8B2B8' }
 ];
 
 // ===================================================================
@@ -472,13 +473,22 @@ const MODES = [
     headingStyle:'mario-block',
     quoteStyle:'mario-card',
     hrStyle:'mario-coins'
+  },
+  {
+    id:'coffee-journal', name:'轻手账咖啡馆',
+    desc:'奶油纸感 · 温柔治愈',
+    titleFont:3, bodyFont:1, color:10,
+    lineHeight:2.0, paraSpacing:1.15,
+    headingStyle:'coffee-label',
+    quoteStyle:'coffee-note',
+    hrStyle:'coffee-dots'
   }
 ];
 
 // ===================================================================
 // DEFAULT CONTENT
 // ===================================================================
-const DEFAULT_HTML = `<p>支持 <strong>9种排版模式</strong>、6种标题字体、4种正文字体、10套配色方案。每种模式都配备了现代感的渐变装饰条、精致引用卡片和细腻的排版细节，让每篇文章都充满设计感。</p>
+const DEFAULT_HTML = `<p>支持 <strong>10种排版模式</strong>、6种标题字体、4种正文字体、11套配色方案。每种模式都配备了现代感的渐变装饰条、精致引用卡片和细腻的排版细节，让每篇文章都充满设计感。</p>
 <h2>排版模式一览</h2>
 <p>点击顶部「排版模式」切换风格。每种模式包含完整的字体、配色、标题渐变装饰、引用卡片和分割线组合：</p>
 <ul>
@@ -491,6 +501,7 @@ const DEFAULT_HTML = `<p>支持 <strong>9种排版模式</strong>、6种标题�
 <li><strong>极简留白</strong> — 微妙侧边线 + 超宽行距留白</li>
 <li><strong>知识博主</strong> — 渐变编号标题 + 深海蓝卡片</li>
 <li><strong>马里奥主题</strong> — 红蓝黄绿主题色 + 金币编号与游戏感卡片</li>
+<li><strong>轻手账咖啡馆</strong> — 奶油纸感卡片 + 咖啡棕手账标题</li>
 </ul>
 <blockquote>好的排版不仅是视觉上的美感，更是对读者阅读体验的尊重。每一处渐变、每一个圆角、每一个间距都在传达用心。</blockquote>
 <h2>特色工具</h2>
@@ -1457,6 +1468,8 @@ function applyPreviewStyles() {
   const mode = MODES.find(m => m.id === STATE.mode) || MODES[0];
   const themePipe = c.pipe || c.main;
   const themeSky = c.sky || c.main;
+  const journalPaper = c.paper || c.sub || '#FFF6E8';
+  const journalRose = c.rose || c.accent || '#E8B2B8';
 
   // Base
   preview.style.fontFamily = bf.stack;
@@ -1498,6 +1511,17 @@ function applyPreviewStyles() {
       openingP.style.padding = '44px 20px 18px';
       openingP.style.opacity = '1';
     }
+    if (mode.id === 'coffee-journal') {
+      openingP.style.background = `linear-gradient(135deg, ${journalPaper}, #FFFFFF)`;
+      openingP.style.border = `1.5px solid ${alphaColor(c.main, 0.34, '#DCC8A7')}`;
+      openingP.style.borderRadius = '16px';
+      openingP.style.boxShadow = `0 8px 24px ${alphaColor(c.main, 0.10, 'rgba(200,135,78,0.10)')}`;
+      openingP.style.color = c.text;
+      openingP.style.fontSize = '15px';
+      openingP.style.lineHeight = '2';
+      openingP.style.padding = '20px 22px';
+      openingP.style.opacity = '1';
+    }
   }
 
   // Closing section style (last p or p after last hr)
@@ -1526,6 +1550,7 @@ function applyPreviewStyles() {
     // Reset
     h.style.textAlign = '';
     h.style.borderBottom = '';
+    h.style.border = '';
     h.style.borderLeft = '';
     h.style.paddingBottom = '';
     h.style.background = '';
@@ -1534,6 +1559,7 @@ function applyPreviewStyles() {
     h.style.display = '';
     h.style.borderTop = '';
     h.style.borderImage = '';
+    h.style.boxShadow = '';
     h.style.gap = '';
     h.style.letterSpacing = '';
     h.style.color = c.text;
@@ -1623,6 +1649,19 @@ function applyPreviewStyles() {
         bq.dataset.marioQuoteAdded = '1';
       }
     }
+    if (mode.id === 'coffee-journal') {
+      bq.style.borderRadius = '14px';
+      bq.style.border = `1.5px solid ${alphaColor(c.main, 0.42, '#DCC8A7')}`;
+      bq.style.borderLeft = `5px solid ${c.accent}`;
+      bq.style.background = `linear-gradient(135deg, #FFFFFF, ${journalPaper})`;
+      bq.style.boxShadow = `0 6px 18px ${alphaColor(c.main, 0.08, 'rgba(200,135,78,0.08)')}`;
+      bq.style.padding = '18px 20px';
+      bq.style.color = c.text;
+      if (!bq.dataset.coffeeQuoteAdded) {
+        bq.innerHTML = `<span style="display:inline-block;color:${c.main};font-size:12px;font-weight:800;letter-spacing:1px;margin-bottom:8px;">NOTE</span><br>${bq.innerHTML}`;
+        bq.dataset.coffeeQuoteAdded = '1';
+      }
+    }
     // Chinese: classical border
     if (mode.id === 'chinese') {
       bq.style.border = '2px double ' + c.main + '60';
@@ -1697,6 +1736,11 @@ function applyPreviewStyles() {
       list.style.paddingLeft = '0';
       list.style.margin = '1.2em 0';
     }
+    if (mode.id === 'coffee-journal') {
+      list.style.listStyle = 'none';
+      list.style.paddingLeft = '0';
+      list.style.margin = '1.2em 0';
+    }
   });
   preview.querySelectorAll('li').forEach((li, liIdx) => {
     li.style.marginBottom = '0.4em';
@@ -1728,6 +1772,20 @@ function applyPreviewStyles() {
         li.dataset.marioCoinAdded = '1';
       }
     }
+    if (mode.id === 'coffee-journal') {
+      li.style.position = 'relative';
+      li.style.marginBottom = '10px';
+      li.style.padding = '11px 14px 11px 46px';
+      li.style.border = `1px solid ${alphaColor(c.main, 0.24, '#E7D6BE')}`;
+      li.style.borderRadius = '12px';
+      li.style.background = '#FFFFFF';
+      li.style.boxShadow = `0 3px 12px ${alphaColor(c.main, 0.06, 'rgba(200,135,78,0.06)')}`;
+      if (!li.dataset.coffeeItemAdded) {
+        const num = String(liIdx + 1).padStart(2, '0');
+        li.innerHTML = `<span style="position:absolute;left:14px;top:12px;width:22px;height:22px;border-radius:50%;background:${c.main};color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1;">${num}</span>${li.innerHTML}`;
+        li.dataset.coffeeItemAdded = '1';
+      }
+    }
   });
 
   // Strong / em colors
@@ -1741,6 +1799,11 @@ function applyPreviewStyles() {
       img.style.border = `3px solid ${themePipe}`;
       img.style.boxShadow = `0 6px 0 ${alphaColor(themeSky, 0.18, 'rgba(30,136,229,0.18)')}`;
       img.style.background = '#FFFFFF';
+    }
+    if (mode.id === 'coffee-journal') {
+      img.style.border = `6px solid ${journalPaper}`;
+      img.style.boxShadow = `0 8px 22px ${alphaColor(c.main, 0.14, 'rgba(200,135,78,0.14)')}`;
+      img.style.background = journalPaper;
     }
   });
   applyThemedComponents(c);
@@ -1879,6 +1942,8 @@ function applyThemedComponents(c) {
 function applyHeadingStyle(h, style, c, tag) {
   const grad = c.gradient || `linear-gradient(135deg, ${c.main}, ${c.accent})`;
   const themeSky = c.sky || c.main;
+  const journalPaper = c.paper || c.sub || '#FFF6E8';
+  const journalRose = c.rose || c.accent || '#E8B2B8';
   // Inject gradient bar via ::before pseudo-element using a wrapper span
   function addGradientBar(h, position, barW, barH, barRadius, gradient) {
     // Remove any existing bar
@@ -2002,6 +2067,25 @@ function applyHeadingStyle(h, style, c, tag) {
         h.dataset.marioBadgeAdded = '1';
       }
       break;
+    case 'coffee-label':
+      h.style.color = c.text;
+      h.style.background = 'transparent';
+      h.style.border = 'none';
+      h.style.boxShadow = 'none';
+      h.style.padding = '12px 0 8px';
+      h.style.display = 'flex';
+      h.style.alignItems = 'center';
+      h.style.gap = '10px';
+      h.style.textAlign = 'left';
+      h.style.letterSpacing = '0.02em';
+      h.style.fontSize = tag === 'H1' ? '22px' : tag === 'H2' ? '18px' : '16px';
+      if (!h.dataset.coffeeBadgeAdded) {
+        const allHeadings = Array.from(h.parentElement.querySelectorAll('h1,h2,h3'));
+        const num = String(allHeadings.indexOf(h) + 1).padStart(2, '0');
+        h.innerHTML = `<span style="display:inline-flex;align-items:center;justify-content:center;min-width:42px;height:34px;border-radius:10px;background:${journalRose};color:#fff;font-size:18px;font-weight:900;line-height:1;box-shadow:0 4px 0 ${alphaColor(c.main,0.16,'rgba(200,135,78,0.16)')};">${num}</span><span style="display:inline-block;background:${journalPaper};border-radius:999px;padding:7px 14px;border:1px solid ${alphaColor(c.main,0.24,'#E7D6BE')};min-width:0;">${h.innerHTML}</span><span style="width:34px;height:1px;background:${c.accent};opacity:.7;flex-shrink:0;"></span>`;
+        h.dataset.coffeeBadgeAdded = '1';
+      }
+      break;
     case 'tag-badge':
       h.style.color = c.accent;
       h.style.fontWeight = '700';
@@ -2021,6 +2105,7 @@ function applyHeadingStyle(h, style, c, tag) {
 function applyQuoteStyle(bq, style, c) {
   const grad = c.gradient || `linear-gradient(135deg, ${c.main}, ${c.accent})`;
   const themeSky = c.sky || c.main;
+  const journalPaper = c.paper || c.sub || '#FFF6E8';
   switch(style) {
     case 'blue-bar':
       bq.style.borderLeft = 'none';
@@ -2142,6 +2227,17 @@ function applyQuoteStyle(bq, style, c) {
       bq.style.lineHeight = '1.85';
       bq.style.boxShadow = `0 6px 0 ${alphaColor(themeSky, 0.18, 'rgba(30,136,229,0.18)')}`;
       break;
+    case 'coffee-note':
+      bq.style.border = `1.5px solid ${alphaColor(c.main, 0.42, '#DCC8A7')}`;
+      bq.style.borderLeft = `5px solid ${c.accent}`;
+      bq.style.background = `linear-gradient(135deg, #FFFFFF, ${journalPaper})`;
+      bq.style.padding = '18px 20px';
+      bq.style.borderRadius = '14px';
+      bq.style.color = c.text;
+      bq.style.fontSize = '14px';
+      bq.style.lineHeight = '1.9';
+      bq.style.boxShadow = `0 6px 18px ${alphaColor(c.main, 0.08, 'rgba(200,135,78,0.08)')}`;
+      break;
   }
 }
 
@@ -2152,6 +2248,7 @@ function applyHrStyle(hr, style, c) {
   const grad = c.gradient || `linear-gradient(135deg, ${c.main}, ${c.accent})`;
   const themePipe = c.pipe || c.main;
   const themeSky = c.sky || c.main;
+  const journalPaper = c.paper || c.sub || '#FFF6E8';
   hr.style.border = 'none';
   hr.style.height = 'auto';
   hr.style.overflow = 'visible';
@@ -2186,6 +2283,9 @@ function applyHrStyle(hr, style, c) {
       break;
     case 'mario-coins':
       hr.outerHTML = `<div style="margin:2.2em 0;display:flex;align-items:center;justify-content:center;gap:8px"><span style="flex:1;max-width:86px;height:4px;background:${themePipe};border-radius:999px;box-shadow:0 3px 0 ${alphaColor(themeSky,0.18,'rgba(30,136,229,0.18)')}"></span><span style="width:18px;height:18px;border-radius:50%;background:${c.accent};border:2px solid #111827;box-sizing:border-box;"></span><span style="width:18px;height:18px;border-radius:50%;background:${c.accent};border:2px solid #111827;box-sizing:border-box;"></span><span style="width:18px;height:18px;border-radius:50%;background:${c.accent};border:2px solid #111827;box-sizing:border-box;"></span><span style="flex:1;max-width:86px;height:4px;background:${themePipe};border-radius:999px;box-shadow:0 3px 0 ${alphaColor(themeSky,0.18,'rgba(30,136,229,0.18)')}"></span></div>`;
+      break;
+    case 'coffee-dots':
+      hr.outerHTML = `<div style="margin:2em 0;display:flex;align-items:center;justify-content:center;gap:10px"><span style="width:72px;height:1px;background:${alphaColor(c.main,0.28,'#DCC8A7')}"></span><span style="width:9px;height:9px;border-radius:50%;background:${c.main};"></span><span style="width:9px;height:9px;border-radius:50%;background:${c.accent};"></span><span style="width:9px;height:9px;border-radius:50%;background:${journalPaper};border:1px solid ${alphaColor(c.main,0.34,'#DCC8A7')};box-sizing:border-box;"></span><span style="width:72px;height:1px;background:${alphaColor(c.main,0.28,'#DCC8A7')}"></span></div>`;
       break;
     case 'none':
       hr.style.display = 'none';
@@ -2777,9 +2877,9 @@ function showHelp() {
       </ul>
       <h4>🎨 排版</h4>
       <ul>
-        <li><strong>排版模式</strong>：9种预设模式一键切换</li>
+        <li><strong>排版模式</strong>：10种预设模式一键切换</li>
         <li><strong>字体</strong>：独立设置标题和正文字体</li>
-        <li><strong>配色</strong>：10种预设 + 自定义配色</li>
+        <li><strong>配色</strong>：11种预设 + 自定义配色</li>
         <li><strong>行距/段距</strong>：5档预设 + 自定义数值</li>
       </ul>
       <h4>📋 复制</h4>
