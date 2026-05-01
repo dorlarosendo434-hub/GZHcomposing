@@ -1239,7 +1239,76 @@ function insertDesignEnding() {
 // ===================================================================
 // SMART PREPROCESS: Plain text -> Markdown
 // ===================================================================
+function isConservativeHeadingLine(text, prevLine = '', nextLine = '') {
+  const s = String(text || '').trim();
+  if (!s) return false;
+  if (s.length > 24) return false;
+  if (/[。！？!?；;]/.test(s)) return false;
+  if (/[，,]/.test(s)) return false;
+  if (/^(但|但是|而是|而且|所以|因此|如果|因为|同时|然后|好像|这些|这个|这就|于是|不过|其实|只是|甚至)/.test(s)) return false;
+
+  const prevBlank = !String(prevLine || '').trim();
+  const nextBlank = !String(nextLine || '').trim();
+  const isolated = prevBlank || nextBlank;
+  const numberedHeading = /^(第?[一二三四五六七八九十百千万\d]{1,3}[章节部分条点、.．)）:：]\s*)\S+/.test(s);
+  const compactColonHeading = /^[^:：]{2,10}[:：]$/.test(s) && !/[的了是在把被会让让人我们你我他她它]/.test(s.replace(/[:：]$/, ''));
+  const commonLabelHeading = /^(前言|导语|引言|目录|摘要|背景|问题|方法|案例|步骤|清单|总结|小结|复盘|结论|写在最后|今日小结|核心观点|重点提示|注意事项)$/.test(s.replace(/[:：]$/, ''));
+  const shortIsolatedTitle = isolated && s.length <= 12 && !/[的了是在把被会让]/.test(s) && !/[:：]$/.test(s);
+
+  return numberedHeading || compactColonHeading || commonLabelHeading || shortIsolatedTitle;
+}
+function summarizeHeadingCandidate(text) {
+  let s = String(text || '').trim().replace(/[:：]\s*$/, '');
+  if (!s || s.length > 42) return '';
+  if (!/[:：]$/.test(String(text || '').trim())) return '';
+
+  const keywordRules = [
+    { re: /不适感|不舒服|不安|焦虑|压力/, title: '不适感' },
+    { re: /另一件事|另一层问题/, title: '另一件事' },
+    { re: /奇怪的结构|结构/, title: '奇怪结构' },
+    { re: /AI的意义|意义/, title: 'AI的意义' },
+    { re: /成本|效率|收入|消费/, title: '效率与成本' },
+    { re: /总结|小结|复盘/, title: '小结' }
+  ];
+  const matched = keywordRules.find(rule => rule.re.test(s));
+  if (matched) return matched.title;
+
+  const parts = s.split(/[，,；;]/).map(x => x.trim()).filter(Boolean);
+  let core = parts.length > 1 ? parts[parts.length - 1] : s;
+  core = core
+    .replace(/^(这就|这是|这些|这种|那就是|而是|但是|但|所以|因此|然后|其实|只是|好像)/, '')
+    .replace(/^(会让人|让人|让我们|让你|让他|让她|产生了?|形成了?|变成了?|带来了?|导致了?)/, '')
+    .replace(/^(一个|一种|一件|很强的|很大的|很奇怪的|很明显的|真正的|了一个|了一种|了一件)/, '')
+    .replace(/^(的|了|是)/, '')
+    .trim();
+
+  core = core.replace(/[“”"']/g, '').replace(/\s+/g, '');
+  if (!core || core.length < 3) return '';
+  if (/^(另一件事|一件事|一个问题|这个问题|这些变化)$/.test(core)) return '';
+  return core.length > 12 ? core.slice(0, 12) : core;
+}
 function smartPreprocess() {
+  const rawText = editor.innerText || '';
+  if (!rawText.trim()) { alert('编辑器为空，请先输入内容'); return; }
+  showModal(`
+    <h3>智能预处理</h3>
+    <p style="font-size:12px;color:#777;line-height:1.7;margin-bottom:14px">选择处理方式。两种方式都会尽量保留原文，不会改写句子内容。</p>
+    <div style="display:grid;grid-template-columns:1fr;gap:10px">
+      <div style="border:2px solid #e5e7eb;border-radius:8px;padding:14px;cursor:pointer" onclick="runSmartPreprocess('clean')">
+        <div style="font-size:14px;font-weight:800;color:#6B2303;margin-bottom:4px">保守整理</div>
+        <div style="font-size:12px;color:#888;line-height:1.6">只识别明确标题、列表、引用和段落。普通句子不会被猜成标题。</div>
+      </div>
+      <div style="border:2px solid #e5e7eb;border-radius:8px;padding:14px;cursor:pointer" onclick="runSmartPreprocess('outline')">
+        <div style="font-size:14px;font-weight:800;color:#6B2303;margin-bottom:4px">提炼小标题</div>
+        <div style="font-size:12px;color:#888;line-height:1.6">在段落前新增短标题，原句保留为正文，适合长文快速分层。</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="hideModal()">取消</button>
+    </div>
+  `);
+}
+function runSmartPreprocess(mode = 'clean') {
   const rawText = editor.innerText || '';
   if (!rawText.trim()) { alert('编辑器为空，请先输入内容'); return; }
   // If already has markdown, warn
@@ -1286,20 +1355,20 @@ function smartPreprocess() {
       continue;
     }
 
-    // Detect potential heading: short line (<=30 chars), not ending with common punctuation marks that suggest a sentence
+    // Only promote lines with clear heading signals. Do not guess from ordinary sentences.
+    const prevLine = (i > 0) ? lines[i - 1].trim() : '';
     const nextLine = (i + 1 < lines.length) ? lines[i + 1].trim() : '';
-    const isShort = trimmed.length <= 30;
-    const endsWithPunct = /[。！？，；、,;.!?]$/.test(trimmed);
-    const hasNumberPrefix = /^[\d一二三四五六七八九十]+[.\u3001\uff0c\s)\uff09]/.test(trimmed);
-    const isAllCaps = /^[A-Z\s]{3,}$/.test(trimmed);
-    const followedByBlank = !nextLine;
-
-    if ((isShort && !endsWithPunct && (followedByBlank || hasNumberPrefix)) || isAllCaps || hasNumberPrefix && isShort) {
-      // Clean number prefix for heading
-      let headingText = trimmed.replace(/^[\d一二三四五六七八九十]+[.\u3001)\uff09\s]\s*/, '');
-      if (!headingText) headingText = trimmed;
-      result.push('## ' + headingText);
+    if (isConservativeHeadingLine(trimmed, prevLine, nextLine)) {
+      result.push('## ' + trimmed);
       continue;
+    }
+    if (mode === 'outline') {
+      const summaryHeading = summarizeHeadingCandidate(trimmed);
+      const lastLine = result[result.length - 1] || '';
+      if (summaryHeading && !/^#{1,3}\s/.test(lastLine)) {
+        if (lastLine) result.push('');
+        result.push('### ' + summaryHeading);
+      }
     }
 
     // Detect list items: lines starting with · • ● ○ – — or similar bullets
@@ -1325,6 +1394,7 @@ function smartPreprocess() {
   // Parse MD and set as editor content
   const parsedHtml = parseMD(mdText);
   editor.innerHTML = sanitizeContentHTML(parsedHtml);
+  hideModal();
   scheduleUpdate();
 }
 
