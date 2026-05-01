@@ -739,6 +739,148 @@ function normalizeImagePairs(root) {
     group.replaceWith(table);
   });
 }
+function stripGeneratedListMarker(li) {
+  const first = li.firstElementChild;
+  if (!first || first.tagName !== 'SPAN') return;
+  const styleText = (first.getAttribute('style') || '').toLowerCase();
+  const looksGenerated = styleText.includes('position:absolute') ||
+    styleText.includes('border-radius:50%') ||
+    styleText.includes('border-radius: 50%');
+  if (looksGenerated) first.remove();
+}
+function buildWechatListMarker(list, idx, mode, c) {
+  const marker = document.createElement('span');
+  const isOrdered = list.tagName === 'OL';
+  const isCardMode = mode.id === 'mario-theme' || mode.id === 'coffee-journal' || (mode.id === 'tutorial' && isOrdered);
+  marker.textContent = isCardMode ? String(idx + 1).padStart(2, '0') : (isOrdered ? `${idx + 1}.` : (mode.id === 'ai-tech' ? '▪' : '•'));
+  marker.style.display = 'inline-block';
+  marker.style.textAlign = 'center';
+  marker.style.fontWeight = isCardMode ? '900' : '700';
+  marker.style.fontSize = isCardMode ? '11px' : '16px';
+  marker.style.color = isCardMode ? '#111827' : c.main;
+  marker.style.lineHeight = isCardMode ? '26px' : '1.4';
+  marker.style.width = isCardMode ? '26px' : '20px';
+  marker.style.height = isCardMode ? '26px' : 'auto';
+  if (mode.id === 'mario-theme') {
+    marker.style.background = c.accent;
+    marker.style.border = '2px solid #111827';
+    marker.style.borderRadius = '50%';
+    marker.style.boxSizing = 'border-box';
+  } else if (mode.id === 'coffee-journal') {
+    marker.style.background = c.main;
+    marker.style.color = '#FFFFFF';
+    marker.style.borderRadius = '50%';
+    marker.style.fontSize = '10px';
+    marker.style.lineHeight = '22px';
+    marker.style.width = '22px';
+    marker.style.height = '22px';
+  } else if (mode.id === 'tutorial' && isOrdered) {
+    marker.style.background = c.main;
+    marker.style.color = '#FFFFFF';
+    marker.style.borderRadius = '50%';
+    marker.style.fontSize = '12px';
+    marker.style.lineHeight = '24px';
+    marker.style.width = '24px';
+    marker.style.height = '24px';
+  }
+  return marker;
+}
+function normalizeWechatLists(root) {
+  const c = getColors();
+  const mode = MODES.find(m => m.id === STATE.mode) || MODES[0];
+  const journalPaper = c.paper || c.sub || '#FFF6E8';
+  const themeSky = c.sky || c.main;
+
+  Array.from(root.querySelectorAll('ul,ol')).forEach(list => {
+    const items = Array.from(list.children).filter(child => child.tagName === 'LI');
+    if (!items.length) return;
+
+    const wrapper = document.createElement('section');
+    wrapper.style.display = 'block';
+    wrapper.style.margin = list.style.margin || `1em 0 ${STATE.paraSpacing}em`;
+    wrapper.style.padding = '0';
+
+    items.forEach((li, idx) => {
+      stripGeneratedListMarker(li);
+
+      const itemTable = document.createElement('table');
+      itemTable.style.width = '100%';
+      itemTable.style.maxWidth = '100%';
+      itemTable.style.borderCollapse = 'separate';
+      itemTable.style.borderSpacing = '0';
+      itemTable.style.tableLayout = 'fixed';
+      itemTable.style.boxSizing = 'border-box';
+      itemTable.style.margin = '0 0 10px 0';
+      itemTable.style.color = c.text;
+
+      if (mode.id === 'mario-theme') {
+        itemTable.style.border = `2px solid ${alphaColor(themeSky, 0.28, '#bbdefb')}`;
+        itemTable.style.borderRadius = '12px';
+        itemTable.style.background = '#FFFFFF';
+        itemTable.style.boxShadow = `0 4px 0 ${alphaColor(c.accent, 0.35, 'rgba(251,192,45,0.35)')}`;
+      } else if (mode.id === 'coffee-journal') {
+        itemTable.style.border = `1px solid ${alphaColor(c.main, 0.24, '#E7D6BE')}`;
+        itemTable.style.borderRadius = '12px';
+        itemTable.style.background = '#FFFFFF';
+        itemTable.style.boxShadow = `0 3px 12px ${alphaColor(c.main, 0.06, 'rgba(200,135,78,0.06)')}`;
+      }
+
+      const tbody = document.createElement('tbody');
+      const tr = document.createElement('tr');
+      const markerTd = document.createElement('td');
+      const contentTd = document.createElement('td');
+      markerTd.style.width = mode.id === 'mario-theme' || mode.id === 'coffee-journal' ? '42px' : '28px';
+      markerTd.style.verticalAlign = 'top';
+      markerTd.style.padding = mode.id === 'mario-theme' || mode.id === 'coffee-journal' ? '12px 0 10px 12px' : '0 8px 6px 0';
+      markerTd.style.textAlign = 'center';
+      contentTd.style.verticalAlign = 'top';
+      contentTd.style.padding = mode.id === 'mario-theme' || mode.id === 'coffee-journal' ? '12px 14px 10px 8px' : '0 0 6px 0';
+      contentTd.style.fontSize = li.style.fontSize || '15px';
+      contentTd.style.lineHeight = li.style.lineHeight || String(STATE.lineHeight);
+      contentTd.style.letterSpacing = li.style.letterSpacing || '0.03em';
+      contentTd.style.color = li.style.color || c.text;
+      contentTd.innerHTML = li.innerHTML;
+
+      if (mode.id === 'coffee-journal') {
+        contentTd.style.background = `linear-gradient(135deg,#FFFFFF,${journalPaper})`;
+      }
+
+      markerTd.appendChild(buildWechatListMarker(list, idx, mode, c));
+      tr.appendChild(markerTd);
+      tr.appendChild(contentTd);
+      tbody.appendChild(tr);
+      itemTable.appendChild(tbody);
+      wrapper.appendChild(itemTable);
+    });
+
+    list.replaceWith(wrapper);
+  });
+}
+function normalizeWechatPositioning(root) {
+  Array.from(root.querySelectorAll('span')).forEach(span => {
+    if ((span.style.position || '').toLowerCase() !== 'absolute') return;
+    const text = span.textContent.trim();
+    const width = parseFloat(span.style.width || '0');
+    const height = String(span.style.height || '');
+    if (!text || (width > 0 && width <= 4) || height === '100%') {
+      span.remove();
+      return;
+    }
+    span.style.position = 'static';
+    span.style.left = '';
+    span.style.right = '';
+    span.style.top = '';
+    span.style.bottom = '';
+    span.style.display = 'inline-block';
+    span.style.verticalAlign = 'middle';
+    span.style.marginRight = span.style.marginRight || '6px';
+  });
+}
+function prepareWechatCompatibility(root) {
+  normalizeImagePairs(root);
+  normalizeWechatLists(root);
+  normalizeWechatPositioning(root);
+}
 function sanitizeContentHTML(html) {
   const tpl = document.createElement('template');
   tpl.innerHTML = String(html || '');
@@ -2582,6 +2724,7 @@ function copyToWechat() {
   const clone = preview.cloneNode(true);
   // Re-apply styles in the clone
   inlineAllStyles(clone);
+  prepareWechatCompatibility(clone);
   clone.innerHTML = sanitizeContentHTML(clone.innerHTML);
   // Wrap with background texture
   const bg = BG_TEXTURES.find(b => b.id === STATE.bg) || BG_TEXTURES[0];
@@ -2681,6 +2824,7 @@ function inlineAllStyles(container) {
 function exportHTML() {
   const clone = preview.cloneNode(true);
   inlineAllStyles(clone);
+  prepareWechatCompatibility(clone);
   clone.innerHTML = sanitizeContentHTML(clone.innerHTML);
   const html = `<!DOCTYPE html>
 <html lang="zh-CN">
