@@ -192,8 +192,8 @@ input,select,textarea{font-family:inherit;font-size:inherit}
   <!-- Left: Editor -->
   <div class="panel panel-left" id="panelLeft">
     <div class="editor-toolbar">
-      <button class="tb-btn" title="加粗" onclick="execCmd('bold')"><b>B</b></button>
-      <button class="tb-btn" title="斜体" onclick="execCmd('italic')"><i>I</i></button>
+      <button class="tb-btn" id="btnBold" title="加粗" onclick="execCmd('bold')"><b>B</b></button>
+      <button class="tb-btn" id="btnItalic" title="斜体" onclick="execCmd('italic')"><i>I</i></button>
       <span class="tb-sep"></span>
       <select class="tb-select" onchange="execHeading(this.value);this.value=''" title="标题级别">
         <option value="">标题</option>
@@ -202,10 +202,10 @@ input,select,textarea{font-family:inherit;font-size:inherit}
         <option value="H3">H3</option>
       </select>
       <span class="tb-sep"></span>
-      <button class="tb-btn" title="引用" onclick="execCmd('formatBlock','BLOCKQUOTE')">❝</button>
+      <button class="tb-btn" id="btnQuote" title="引用" onclick="execCmd('formatBlock','BLOCKQUOTE')">❝</button>
       <button class="tb-btn" title="代码块" onclick="insertCodeBlock()">⟨/⟩</button>
-      <button class="tb-btn" title="无序列表" onclick="execCmd('insertUnorderedList')">•≡</button>
-      <button class="tb-btn" title="有序列表" onclick="execCmd('insertOrderedList')">1.</button>
+      <button class="tb-btn" id="btnUl" title="无序列表" onclick="execCmd('insertUnorderedList')">•≡</button>
+      <button class="tb-btn" id="btnOl" title="有序列表" onclick="execCmd('insertOrderedList')">1.</button>
       <span class="tb-sep"></span>
       <div style="position:relative">
         <button class="tb-btn" title="插入图片" onclick="toggleImgPanel()" id="btnImg">📷</button>
@@ -538,21 +538,94 @@ window.addEventListener('DOMContentLoaded', () => {
   setupDivider();
   setupScrollSync();
   setupEditorEvents();
+  updateToolbarStates();
 });
 
 // ===================================================================
 // EDITOR COMMANDS
 // ===================================================================
 function execCmd(cmd, val) {
+  if (cmd === 'formatBlock') {
+    toggleBlockFormat(String(val || 'P').toUpperCase());
+    return;
+  }
   document.execCommand(cmd, false, val || null);
   editor.focus();
   scheduleUpdate();
+  updateToolbarStates();
 }
 function execHeading(tag) {
   if (!tag) return;
-  document.execCommand('formatBlock', false, tag);
+  toggleBlockFormat(String(tag).toUpperCase());
+}
+
+function toggleBlockFormat(tag) {
+  const fallback = tag === 'BLOCKQUOTE' ? 'P' : 'P';
+  const active = isSelectionInBlockFormat(tag);
+  document.execCommand('formatBlock', false, active ? fallback : tag);
   editor.focus();
   scheduleUpdate();
+  updateToolbarStates();
+}
+
+function getSelectionRangeInEditor() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return null;
+  const range = sel.getRangeAt(0);
+  const anchor = sel.anchorNode;
+  const focus = sel.focusNode;
+  if ((anchor && editor.contains(anchor)) || (focus && editor.contains(focus))) return range;
+  return null;
+}
+
+function getElementFromNode(node) {
+  if (!node) return null;
+  return node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+}
+
+function closestBlock(node) {
+  let el = getElementFromNode(node);
+  while (el && el !== editor) {
+    if (/^(P|H1|H2|H3|BLOCKQUOTE|LI|PRE|DIV|SECTION)$/i.test(el.tagName)) return el;
+    el = el.parentElement;
+  }
+  return null;
+}
+
+function closestTag(node, tag) {
+  let el = getElementFromNode(node);
+  while (el && el !== editor) {
+    if (el.tagName === tag) return el;
+    el = el.parentElement;
+  }
+  return null;
+}
+
+function isSelectionInBlockFormat(tag) {
+  const range = getSelectionRangeInEditor();
+  if (!range) return false;
+  if (tag === 'BLOCKQUOTE') {
+    return !!closestTag(range.startContainer, 'BLOCKQUOTE') && !!closestTag(range.endContainer, 'BLOCKQUOTE');
+  }
+  const startBlock = closestBlock(range.startContainer);
+  const endBlock = closestBlock(range.endContainer);
+  return !!startBlock && !!endBlock && startBlock.tagName === tag && endBlock.tagName === tag;
+}
+
+function setToolbarActive(id, active) {
+  const el = $(id);
+  if (el) el.classList.toggle('active', !!active);
+}
+
+function updateToolbarStates() {
+  try {
+    setToolbarActive('btnBold', document.queryCommandState('bold'));
+    setToolbarActive('btnItalic', document.queryCommandState('italic'));
+    setToolbarActive('btnUl', document.queryCommandState('insertUnorderedList'));
+    setToolbarActive('btnOl', document.queryCommandState('insertOrderedList'));
+  } catch (e) {}
+  setToolbarActive('btnQuote', isSelectionInBlockFormat('BLOCKQUOTE'));
+  setToolbarActive('btnHighlight', isSelectionInEditorHighlight());
 }
 function insertCodeBlock() {
   const sel = window.getSelection();
@@ -701,7 +774,7 @@ function sanitizeElementTree(root) {
         return;
       }
       if (['alt','title'].includes(name)) return;
-      if (['data-ending-block','data-ending-type','data-theme-component','data-theme-role','data-layout'].includes(name)) return;
+      if (['data-ending-block','data-ending-type','data-theme-component','data-theme-role','data-layout','data-editor-highlight'].includes(name)) return;
       node.removeAttribute(attr.name);
     });
 
@@ -1270,12 +1343,66 @@ function applyTextHighlight() {
     alert('请先选中要高亮的文字');
     return;
   }
+  const range = getSelectionRangeInEditor();
+  if (!range) return;
+  const existing = getIntersectingHighlights(range);
+  if (existing.length) {
+    existing.forEach(unwrapElement);
+    editor.focus();
+    scheduleUpdate();
+    updateToolbarStates();
+    return;
+  }
   const c = getColors();
   const color = c.main || '#133363';
-  document.execCommand('foreColor', false, color);
-  document.execCommand('bold', false, null);
+  const selectedHTML = getRangeHTML(range);
+  document.execCommand('insertHTML', false, `<span data-editor-highlight="true" style="color:${color};font-weight:700">${selectedHTML}</span>`);
   editor.focus();
   scheduleUpdate();
+  updateToolbarStates();
+}
+
+function getEditorHighlight(node) {
+  let el = getElementFromNode(node);
+  while (el && el !== editor) {
+    if (el.getAttribute('data-editor-highlight') === 'true') return el;
+    el = el.parentElement;
+  }
+  return null;
+}
+
+function isSelectionInEditorHighlight() {
+  const range = getSelectionRangeInEditor();
+  if (!range) return false;
+  return !!getEditorHighlight(range.startContainer) && !!getEditorHighlight(range.endContainer);
+}
+
+function getIntersectingHighlights(range) {
+  const highlights = new Set();
+  const start = getEditorHighlight(range.startContainer);
+  const end = getEditorHighlight(range.endContainer);
+  if (start) highlights.add(start);
+  if (end) highlights.add(end);
+  editor.querySelectorAll('[data-editor-highlight="true"]').forEach(el => {
+    try {
+      if (range.intersectsNode(el)) highlights.add(el);
+    } catch (e) {}
+  });
+  return Array.from(highlights);
+}
+
+function getRangeHTML(range) {
+  const holder = document.createElement('div');
+  holder.appendChild(range.cloneContents());
+  return sanitizeContentHTML(holder.innerHTML || escapeHtml(range.toString()));
+}
+
+function unwrapElement(el) {
+  if (!el || !el.parentNode) return;
+  const parent = el.parentNode;
+  while (el.firstChild) parent.insertBefore(el.firstChild, el);
+  parent.removeChild(el);
+  parent.normalize();
 }
 
 // ===================================================================
@@ -2093,11 +2220,17 @@ function setupEditorEvents() {
     if (plain) document.execCommand('insertText', false, plain);
   });
   editor.addEventListener('input', scheduleUpdate);
+  editor.addEventListener('keyup', updateToolbarStates);
+  editor.addEventListener('mouseup', updateToolbarStates);
+  editor.addEventListener('focus', updateToolbarStates);
   editor.addEventListener('keydown', e => {
     if (e.key === 'Tab') {
       e.preventDefault();
       document.execCommand('insertText', false, '    ');
     }
+  });
+  document.addEventListener('selectionchange', () => {
+    if (getSelectionRangeInEditor()) updateToolbarStates();
   });
 }
 
