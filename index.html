@@ -385,7 +385,22 @@ const COLOR_SCHEMES = [
   { name:'马卡龙', main:'#F472B6', sub:'#FDF2F8', accent:'#38BDF8', text:'#475569', bg:'#FFFFFE', gradient:'linear-gradient(135deg,#F472B6,#38BDF8)' },
   { name:'深海蓝', main:'#1E3A5F', sub:'#F0F4F8', accent:'#0F172A', text:'#1E293B', bg:'#FFFFFF', gradient:'linear-gradient(135deg,#1E3A5F,#3B82F6)' },
   { name:'马里奥', main:'#E53935', sub:'#E3F2FD', accent:'#FBC02D', text:'#1F2937', bg:'#FFFFFF', gradient:'linear-gradient(135deg,#E53935 0%,#FBC02D 52%,#43A047 100%)', pipe:'#43A047', sky:'#1E88E5' },
-  { name:'手账咖啡', main:'#C8874E', sub:'#FFF6E8', accent:'#A6B68F', text:'#4A3A2A', bg:'#FFFBF4', gradient:'linear-gradient(135deg,#FFF6E8 0%,#DCC8A7 50%,#C8874E 100%)', paper:'#FFF6E8', rose:'#E8B2B8' }
+  { name:'手账咖啡', main:'#C8874E', sub:'#FFF6E8', accent:'#A6B68F', text:'#4A3A2A', bg:'#FFFBF4', gradient:'linear-gradient(135deg,#FFF6E8 0%,#DCC8A7 50%,#C8874E 100%)', paper:'#FFF6E8', rose:'#E8B2B8' },
+  { name:'线条酒红', main:'#851943', sub:'#ECECEC', accent:'#000000', text:'#20242A', bg:'#FFFFFF', gradient:'linear-gradient(135deg,#000000 0%,#851943 62%,#ECECEC 100%)' },
+  { name:'极简暖黄', main:'#FFB736', sub:'#F3F3F1', accent:'#1F252B', text:'#20242A', bg:'#FFFFFF', gradient:'linear-gradient(135deg,#1F252B 0%,#FFB736 65%,#AEAEAE 100%)' },
+  { name:'定制家居', main:'#B79475', sub:'#F5EFE8', accent:'#2C2C2D', text:'#2C2C2D', bg:'#FFFDFC', gradient:'linear-gradient(135deg,#161616 0%,#B79475 58%,#F5EFE8 100%)' },
+  { name:'灰粉线描', main:'#878586', sub:'#F2EEEE', accent:'#D6CBC6', text:'#4E4B4B', bg:'#FBFAF9', gradient:'linear-gradient(135deg,#605E5F 0%,#878586 46%,#D6CBC6 100%)' },
+  { name:'极简花艺', main:'#E2B36F', sub:'#F4F1EA', accent:'#3E3A39', text:'#3E3A39', bg:'#FFFDF9', gradient:'linear-gradient(135deg,#3E3A39 0%,#E2B36F 66%,#DEDEDE 100%)' },
+  { name:'青绿极简', main:'#3C7A7C', sub:'#EEF4F3', accent:'#333333', text:'#333333', bg:'#FFFFFF', gradient:'linear-gradient(135deg,#333333 0%,#3C7A7C 64%,#888888 100%)' },
+  { name:'柔雾绿粉', main:'#865C51', sub:'#F3F4EF', accent:'#C9AEA7', text:'#5B514D', bg:'#FFFDFC', gradient:'linear-gradient(135deg,#C0C5B5 0%,#C9AEA7 48%,#865C51 100%)' },
+  { name:'星夜蓝金', main:'#4263A3', sub:'#F2F4E4', accent:'#D4BC2A', text:'#263653', bg:'#FCFCF7', gradient:'linear-gradient(135deg,#2B3D6E 0%,#4263A3 48%,#D4BC2A 100%)' },
+  { name:'麦田金青', main:'#C69519', sub:'#F8F2D0', accent:'#6B969A', text:'#3F4B29', bg:'#FFFDF3', gradient:'linear-gradient(135deg,#6B969A 0%,#E0BA19 52%,#647129 100%)' },
+  { name:'绿野油彩', main:'#329363', sub:'#EFF8F2', accent:'#68A530', text:'#2F5138', bg:'#FBFEFA', gradient:'linear-gradient(135deg,#98CCBB 0%,#68A530 52%,#329363 100%)' },
+  { name:'向日葵金', main:'#D19831', sub:'#FFF7DD', accent:'#8A4B21', text:'#4A3625', bg:'#FFFDF4', gradient:'linear-gradient(135deg,#DDBF6D 0%,#E5B33D 50%,#8A4B21 100%)' },
+  { name:'鸢尾蓝绿', main:'#3D4A77', sub:'#EEF2E8', accent:'#90AF82', text:'#35415A', bg:'#FBFCF8', gradient:'linear-gradient(135deg,#3D4A77 0%,#7285B7 52%,#90AF82 100%)' },
+  { name:'杏花青蓝', main:'#4F8187', sub:'#EDF6F5', accent:'#B9C092', text:'#31484A', bg:'#FCFEFC', gradient:'linear-gradient(135deg,#6DA5AD 0%,#80B5B8 52%,#B9C092 100%)' },
+  { name:'罗纳河夜', main:'#224A6E', sub:'#EDF5FB', accent:'#E2B945', text:'#1E334A', bg:'#FBFCFF', gradient:'linear-gradient(135deg,#224A6E 0%,#397DBC 52%,#E2B945 100%)' },
+  { name:'晴野蓝麦', main:'#719FD8', sub:'#EFF7FB', accent:'#D6AF6E', text:'#315567', bg:'#FCFEFF', gradient:'linear-gradient(135deg,#95BED7 0%,#719FD8 50%,#D6AF6E 100%)' }
 ];
 
 // ===================================================================
@@ -479,7 +494,7 @@ const MODES = [
 // ===================================================================
 // DEFAULT CONTENT
 // ===================================================================
-const DEFAULT_HTML = `<p>支持 <strong>9种排版模式</strong>、6种标题字体、4种正文字体、11套配色方案。每种模式都配备了现代感的渐变装饰条、精致引用卡片和细腻的排版细节，让每篇文章都充满设计感。</p>
+const DEFAULT_HTML = `<p>支持 <strong>9种排版模式</strong>、6种标题字体、4种正文字体、${COLOR_SCHEMES.length}套配色方案。每种模式都配备了现代感的渐变装饰条、精致引用卡片和细腻的排版细节，让每篇文章都充满设计感。</p>
 <h2>排版模式一览</h2>
 <p>点击顶部「排版模式」切换风格。每种模式包含完整的字体、配色、标题渐变装饰、引用卡片和分割线组合：</p>
 <ul>
@@ -2846,7 +2861,8 @@ function renderColorSettings(title, body) {
   let html = '<div class="sp-section"><h4>预设配色</h4><div class="color-row">';
   COLOR_SCHEMES.forEach((cs,i) => {
     const active = (!STATE.customColors && STATE.colorScheme === i) ? 'active' : '';
-    html += `<div class="color-chip ${active}" style="background:${cs.main}" title="${cs.name}" onclick="selectColorScheme(${i})"></div>`;
+    const chipBg = cs.gradient || `linear-gradient(135deg, ${cs.main} 0%, ${cs.accent} 68%, ${cs.sub} 100%)`;
+    html += `<div class="color-chip ${active}" style="background:${chipBg}" title="${cs.name}" onclick="selectColorScheme(${i})"></div>`;
   });
   html += '</div></div>';
 
@@ -3356,7 +3372,7 @@ function showHelp() {
       <ul>
         <li><strong>排版模式</strong>：9种预设模式一键切换</li>
         <li><strong>字体</strong>：独立设置标题和正文字体</li>
-        <li><strong>配色</strong>：11种预设 + 自定义配色</li>
+        <li><strong>配色</strong>：${COLOR_SCHEMES.length}种预设 + 自定义配色</li>
         <li><strong>行距/段距</strong>：5档预设 + 自定义数值</li>
       </ul>
       <h4>📋 复制</h4>
