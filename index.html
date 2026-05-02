@@ -78,6 +78,7 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 .btn-primary.success{background:#10B981;color:#FFF;border-color:#10B981}
 .btn-secondary{padding:8px 16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--white);color:var(--brand);font-size:13px;transition:all .2s}
 .btn-secondary:hover{border-color:var(--primary);color:var(--primary)}
+.btn-secondary.success{background:#10B981;color:#FFF;border-color:#10B981}
 
 /* ===== Settings Panel (right side overlay) ===== */
 .settings-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.3);z-index:200;display:none;opacity:0;transition:opacity .2s}
@@ -307,6 +308,7 @@ input,select,textarea{font-family:inherit;font-size:inherit}
   <button class="btn-secondary" onclick="importStyleJSON()">📥 导入样式JSON</button>
   <span class="spacer"></span>
   <button class="btn-secondary" onclick="exportHTML()">导出HTML</button>
+  <button class="btn-secondary" id="copyHtmlBtn" onclick="copyHTMLCode()">复制为HTML</button>
   <button class="btn-primary" id="copyBtn" onclick="copyToWechat()">📋 一键复制到公众号</button>
 </div>
 
@@ -895,8 +897,14 @@ function normalizeWechatInlineLayouts(root) {
       h.style.gap = '';
     }
     h.style.boxSizing = 'border-box';
-    h.style.width = '100%';
-    h.style.maxWidth = '100%';
+    if (mode.headingStyle === 'gradient-round' || mode.headingStyle === 'color-block') {
+      h.style.display = 'inline-block';
+      h.style.width = 'fit-content';
+      h.style.maxWidth = '100%';
+    } else {
+      h.style.width = '100%';
+      h.style.maxWidth = '100%';
+    }
 
     const spans = Array.from(h.querySelectorAll(':scope > span'));
     if (h.dataset.coffeeBadgeAdded || mode.headingStyle === 'coffee-label') {
@@ -2206,6 +2214,9 @@ function applyPreviewStyles() {
     h.style.boxShadow = '';
     h.style.gap = '';
     h.style.letterSpacing = '';
+    h.style.width = '';
+    h.style.maxWidth = '';
+    h.style.minWidth = '';
     h.style.color = c.text;
     h.style.position = 'relative';
     // Remove any existing gradient bar from previous render
@@ -2692,6 +2703,9 @@ function applyHeadingStyle(h, style, c, tag) {
       h.style.textAlign = 'left';
       h.style.background = grad;
       h.style.letterSpacing = '0.03em';
+      h.style.display = 'inline-block';
+      h.style.width = 'fit-content';
+      h.style.maxWidth = '100%';
       break;
     case 'small-tag':
       h.style.color = c.accent;
@@ -2708,6 +2722,8 @@ function applyHeadingStyle(h, style, c, tag) {
       h.style.borderRadius = '24px';
       h.style.textAlign = 'center';
       h.style.display = 'inline-block';
+      h.style.width = 'fit-content';
+      h.style.maxWidth = '100%';
       h.style.letterSpacing = '0.04em';
       break;
     case 'thick-underline':
@@ -3243,18 +3259,37 @@ function toggleMobile() {
 // ===================================================================
 // COPY TO WECHAT - Inline all styles
 // ===================================================================
-function copyToWechat() {
-  // Clone preview content
+function buildWechatHTMLSnippet() {
   const clone = preview.cloneNode(true);
-  // Re-apply styles in the clone
   inlineAllStyles(clone);
   prepareWechatCompatibility(clone);
   clone.innerHTML = sanitizeContentHTML(clone.innerHTML);
-  // Wrap with background texture
   const bg = BG_TEXTURES.find(b => b.id === STATE.bg) || BG_TEXTURES[0];
   let bgStyle = `background:${bg.css};`;
   if (bg.cssBgSize) bgStyle += `background-size:${bg.cssBgSize};`;
-  const html = `<section style="${bgStyle}padding:32px 24px;">${clone.innerHTML}</section>`;
+  return `<section style="${bgStyle}padding:32px 24px;">${clone.innerHTML}</section>`;
+}
+function setButtonCopied(btn, copiedText, originalText, ms = 2000) {
+  if (!btn) return;
+  btn.textContent = copiedText;
+  btn.classList.add('success');
+  setTimeout(() => {
+    btn.textContent = originalText;
+    btn.classList.remove('success');
+  }, ms);
+}
+function fallbackCopyText(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+}
+function copyToWechat() {
+  const html = buildWechatHTMLSnippet();
 
   navigator.clipboard.write([
     new ClipboardItem({
@@ -3263,28 +3298,26 @@ function copyToWechat() {
     })
   ]).then(() => {
     const btn = $('copyBtn');
-    btn.textContent = '✅ 已复制';
-    btn.classList.add('success');
-    setTimeout(() => {
-      btn.textContent = '📋 一键复制到公众号';
-      btn.classList.remove('success');
-    }, 2000);
+    setButtonCopied(btn, '✅ 已复制', '📋 一键复制到公众号');
   }).catch(err => {
-    // Fallback
-    const ta = document.createElement('textarea');
-    ta.value = html;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
+    fallbackCopyText(html);
     const btn = $('copyBtn');
-    btn.textContent = '✅ 已复制(文本)';
-    btn.classList.add('success');
-    setTimeout(() => {
-      btn.textContent = '📋 一键复制到公众号';
-      btn.classList.remove('success');
-    }, 2000);
+    setButtonCopied(btn, '✅ 已复制(文本)', '📋 一键复制到公众号');
   });
+}
+function copyHTMLCode() {
+  const html = buildWechatHTMLSnippet();
+  const btn = $('copyHtmlBtn');
+  const done = () => setButtonCopied(btn, '✅ HTML已复制', '复制为HTML');
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(html).then(done).catch(() => {
+      fallbackCopyText(html);
+      done();
+    });
+  } else {
+    fallbackCopyText(html);
+    done();
+  }
 }
 
 function inlineAllStyles(container) {
