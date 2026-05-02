@@ -762,9 +762,12 @@ function stripGeneratedListMarker(li) {
   const first = li.firstElementChild;
   if (!first || first.tagName !== 'SPAN') return;
   const styleText = (first.getAttribute('style') || '').toLowerCase();
+  const text = first.textContent.trim();
   const looksGenerated = styleText.includes('position:absolute') ||
+    styleText.includes('display:inline-flex') ||
     styleText.includes('border-radius:50%') ||
-    styleText.includes('border-radius: 50%');
+    styleText.includes('border-radius: 50%') ||
+    (styleText.includes('background') && /^(\d{1,2}|[鈻鈥•·])/.test(text) && text.length <= 3);
   if (looksGenerated) first.remove();
 }
 function buildWechatListMarker(list, idx, mode, c) {
@@ -822,56 +825,46 @@ function normalizeWechatLists(root) {
     items.forEach((li, idx) => {
       stripGeneratedListMarker(li);
 
-      const itemTable = document.createElement('table');
-      itemTable.style.width = '100%';
-      itemTable.style.maxWidth = '100%';
-      itemTable.style.borderCollapse = 'separate';
-      itemTable.style.borderSpacing = '0';
-      itemTable.style.tableLayout = 'fixed';
-      itemTable.style.boxSizing = 'border-box';
-      itemTable.style.margin = '0 0 10px 0';
-      itemTable.style.color = c.text;
+      const item = document.createElement('section');
+      item.style.display = 'block';
+      item.style.width = '100%';
+      item.style.maxWidth = '100%';
+      item.style.boxSizing = 'border-box';
+      item.style.margin = '0 0 10px 0';
+      item.style.color = c.text;
+      item.style.fontSize = li.style.fontSize || '15px';
+      item.style.lineHeight = li.style.lineHeight || String(STATE.lineHeight);
+      item.style.letterSpacing = li.style.letterSpacing || '0.03em';
+      item.style.paddingLeft = mode.id === 'mario-theme' ? '48px' : mode.id === 'coffee-journal' ? '42px' : '30px';
+      item.style.textIndent = mode.id === 'mario-theme' ? '-38px' : mode.id === 'coffee-journal' ? '-34px' : '-28px';
 
       if (mode.id === 'mario-theme') {
-        itemTable.style.border = `2px solid ${alphaColor(themeSky, 0.28, '#bbdefb')}`;
-        itemTable.style.borderRadius = '12px';
-        itemTable.style.background = '#FFFFFF';
-        itemTable.style.boxShadow = `0 4px 0 ${alphaColor(c.accent, 0.35, 'rgba(251,192,45,0.35)')}`;
+        item.style.border = `2px solid ${alphaColor(themeSky, 0.28, '#bbdefb')}`;
+        item.style.borderRadius = '12px';
+        item.style.background = '#FFFFFF';
+        item.style.boxShadow = `0 4px 0 ${alphaColor(c.accent, 0.35, 'rgba(251,192,45,0.35)')}`;
+        item.style.padding = '12px 14px 10px 48px';
       } else if (mode.id === 'coffee-journal') {
-        itemTable.style.border = `1px solid ${alphaColor(c.main, 0.24, '#E7D6BE')}`;
-        itemTable.style.borderRadius = '12px';
-        itemTable.style.background = '#FFFFFF';
-        itemTable.style.boxShadow = `0 3px 12px ${alphaColor(c.main, 0.06, 'rgba(200,135,78,0.06)')}`;
-        itemTable.style.tableLayout = 'auto';
+        item.style.border = `1px solid ${alphaColor(c.main, 0.24, '#E7D6BE')}`;
+        item.style.borderRadius = '12px';
+        item.style.background = '#FFFFFF';
+        item.style.boxShadow = `0 3px 12px ${alphaColor(c.main, 0.06, 'rgba(200,135,78,0.06)')}`;
+        item.style.padding = '9px 12px 9px 42px';
+      } else {
+        item.style.padding = '0 0 6px 30px';
       }
 
-      const tbody = document.createElement('tbody');
-      const tr = document.createElement('tr');
-      const markerTd = document.createElement('td');
-      const contentTd = document.createElement('td');
-      markerTd.style.width = mode.id === 'mario-theme' ? '42px' : mode.id === 'coffee-journal' ? '34px' : '28px';
-      markerTd.style.verticalAlign = 'top';
-      markerTd.style.padding = mode.id === 'mario-theme' ? '12px 0 10px 12px' : mode.id === 'coffee-journal' ? '10px 0 9px 10px' : '0 8px 6px 0';
-      markerTd.style.textAlign = 'center';
-      contentTd.style.verticalAlign = 'top';
-      contentTd.style.width = 'auto';
-      contentTd.style.padding = mode.id === 'mario-theme' ? '12px 14px 10px 8px' : mode.id === 'coffee-journal' ? '9px 12px 9px 6px' : '0 0 6px 0';
-      contentTd.style.fontSize = li.style.fontSize || '15px';
-      contentTd.style.lineHeight = li.style.lineHeight || String(STATE.lineHeight);
-      contentTd.style.letterSpacing = li.style.letterSpacing || '0.03em';
-      contentTd.style.color = li.style.color || c.text;
-      contentTd.innerHTML = li.innerHTML;
-
-      if (mode.id === 'coffee-journal') {
-        contentTd.style.background = 'transparent';
-      }
-
-      markerTd.appendChild(buildWechatListMarker(list, idx, mode, c));
-      tr.appendChild(markerTd);
-      tr.appendChild(contentTd);
-      tbody.appendChild(tr);
-      itemTable.appendChild(tbody);
-      wrapper.appendChild(itemTable);
+      const marker = buildWechatListMarker(list, idx, mode, c);
+      marker.style.verticalAlign = 'middle';
+      marker.style.marginRight = mode.id === 'coffee-journal' ? '10px' : '8px';
+      marker.style.textIndent = '0';
+      const content = document.createElement('span');
+      content.style.textIndent = '0';
+      content.style.color = li.style.color || c.text;
+      content.innerHTML = li.innerHTML;
+      item.appendChild(marker);
+      item.appendChild(content);
+      wrapper.appendChild(item);
     });
 
     list.replaceWith(wrapper);
