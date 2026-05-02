@@ -871,6 +871,325 @@ function normalizeWechatLists(root) {
     list.replaceWith(wrapper);
   });
 }
+function getWechatThemeBasics() {
+  const c = getColors();
+  const mode = MODES.find(m => m.id === STATE.mode) || MODES[0];
+  return {
+    c,
+    mode,
+    main: c.main || '#2563EB',
+    accent: c.accent || c.main || '#2563EB',
+    sub: c.sub || alphaColor(c.main || '#2563EB', 0.08, '#F7F8FA'),
+    text: c.text || '#333333',
+    paper: c.paper || c.sub || '#FFF6E8',
+    sky: c.sky || c.main || '#2563EB'
+  };
+}
+function setWechatTableBase(table, margin) {
+  table.style.width = '100%';
+  table.style.maxWidth = '100%';
+  table.style.margin = margin || '1em 0';
+  table.style.borderCollapse = 'separate';
+  table.style.borderSpacing = '0';
+  table.style.tableLayout = 'fixed';
+  table.style.boxSizing = 'border-box';
+}
+function makeWechatCell(html, styleMap = {}) {
+  const td = document.createElement('td');
+  Object.entries(styleMap).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') td.style[key] = value;
+  });
+  if (html instanceof Node) td.appendChild(html);
+  else td.innerHTML = html || '';
+  return td;
+}
+function getCleanHeadingHTML(h) {
+  const clone = h.cloneNode(true);
+  Array.from(clone.querySelectorAll('span')).forEach(span => {
+    const styleText = (span.getAttribute('style') || '').toLowerCase();
+    const text = span.textContent.trim();
+    const width = parseFloat(span.style.width || '0');
+    const height = parseFloat(span.style.height || '0');
+    if (!text || (width > 0 && width <= 6) || (height > 0 && height <= 4) || styleText.includes('height:1px')) {
+      span.remove();
+    }
+  });
+  return clone.innerHTML.trim() || h.textContent.trim();
+}
+function extractNumberedHeadingParts(el) {
+  const num = el.querySelector('[data-theme-role="number"]');
+  const title = el.querySelector('[data-theme-role="title"]');
+  return {
+    numText: (num?.textContent || '').trim(),
+    titleHTML: (title?.innerHTML || '').trim() || el.textContent.trim()
+  };
+}
+function buildWechatNumberedHeading(numText, titleHTML, opts = {}) {
+  const { c, mode, main, accent, text, paper, sky } = getWechatThemeBasics();
+  const style = opts.style || mode.headingStyle;
+  const table = document.createElement('table');
+  setWechatTableBase(table, opts.margin || '1.2em 0 0.8em');
+  const tbody = document.createElement('tbody');
+  const tr = document.createElement('tr');
+  const isCoffee = style === 'coffee-label' || mode.id === 'coffee-journal';
+  const isMario = style === 'mario-block' || mode.id === 'mario-theme';
+  if (isCoffee) {
+    table.style.background = paper;
+    table.style.border = `1px solid ${alphaColor(main,0.22,'#E7D6BE')}`;
+    table.style.borderLeft = `4px solid ${main}`;
+  } else if (isMario) {
+    table.style.background = main;
+    table.style.border = '2px solid #111827';
+    table.style.borderBottom = `6px solid ${accent}`;
+  } else {
+    table.style.borderBottom = `1px solid ${alphaColor(main, 0.24, '#d4d4d4')}`;
+  }
+  const badge = document.createElement('span');
+  badge.textContent = numText || '01';
+  badge.style.display = 'inline-block';
+  badge.style.width = isCoffee ? '28px' : isMario ? '30px' : '42px';
+  badge.style.height = isCoffee ? '28px' : isMario ? '30px' : 'auto';
+  badge.style.lineHeight = isCoffee ? '28px' : isMario ? '26px' : '1';
+  badge.style.textAlign = 'center';
+  badge.style.fontWeight = '900';
+  badge.style.fontSize = isCoffee ? '13px' : isMario ? '11px' : '28px';
+  badge.style.color = isCoffee || isMario ? (isMario ? '#111827' : '#FFFFFF') : main;
+  if (isCoffee) {
+    badge.style.background = main;
+    badge.style.borderRadius = '8px';
+  }
+  if (isMario) {
+    badge.style.background = accent;
+    badge.style.border = '2px solid #111827';
+    badge.style.borderRadius = '50%';
+    badge.style.boxSizing = 'border-box';
+  }
+  tr.appendChild(makeWechatCell(badge, {
+    width: isCoffee ? '46px' : isMario ? '48px' : '58px',
+    padding: isCoffee ? '10px 0 10px 12px' : '12px 0',
+    verticalAlign: 'middle',
+    textAlign: 'center'
+  }));
+  if (!isCoffee && !isMario) {
+    tr.appendChild(makeWechatCell('', {
+      width: '1px',
+      padding: '0',
+      verticalAlign: 'middle',
+      background: alphaColor(main, 0.28, '#c8c8c8')
+    }));
+  }
+  tr.appendChild(makeWechatCell(titleHTML, {
+    padding: isCoffee ? '10px 8px' : isMario ? '12px 12px' : '12px 14px',
+    verticalAlign: 'middle',
+    color: isMario ? '#FFFFFF' : text,
+    fontSize: isCoffee ? '17px' : isMario ? '18px' : '18px',
+    fontWeight: '800',
+    lineHeight: '1.55',
+    letterSpacing: '0.02em'
+  }));
+  if (isCoffee) {
+    const line = document.createElement('span');
+    line.style.display = 'inline-block';
+    line.style.width = '30px';
+    line.style.height = '1px';
+    line.style.background = accent;
+    line.style.opacity = '0.55';
+    tr.appendChild(makeWechatCell(line, {
+      width: '46px',
+      padding: '0 12px 0 0',
+      verticalAlign: 'middle',
+      textAlign: 'right'
+    }));
+  }
+  tbody.appendChild(tr);
+  table.appendChild(tbody);
+  return table;
+}
+function normalizeWechatHeadings(root) {
+  const { mode, main, accent, sub, text, paper } = getWechatThemeBasics();
+  const style = mode.headingStyle;
+  Array.from(root.querySelectorAll('h1,h2,h3')).forEach(h => {
+    const tag = h.tagName;
+    const spans = Array.from(h.querySelectorAll(':scope > span'));
+    const firstSpan = spans[0];
+    const badgeText = (firstSpan?.textContent || '').trim();
+    const isBadgeHeading = h.dataset.coffeeBadgeAdded || h.dataset.marioBadgeAdded;
+    const titleHTML = isBadgeHeading && spans[1] ? spans[1].innerHTML.trim() : getCleanHeadingHTML(h);
+
+    if (style === 'coffee-label' || style === 'mario-block' || isBadgeHeading) {
+      h.replaceWith(buildWechatNumberedHeading(badgeText, titleHTML, { style, margin: h.style.margin || '1.2em 0 0.8em' }));
+      return;
+    }
+
+    const table = document.createElement('table');
+    setWechatTableBase(table, h.style.margin || '1.2em 0 0.8em');
+    const tbody = document.createElement('tbody');
+    const size = tag === 'H1' ? '22px' : tag === 'H2' ? '18px' : '16px';
+    const isCenter = style === 'center-deco' || style === 'center-red';
+    const isBlock = style === 'color-block' || style === 'gradient-round';
+    const isLeftBar = style === 'small-tag' || style === 'plain' || style === 'numbered-divider';
+    const isUnderline = style === 'underline-blue' || style === 'thick-underline';
+
+    if (isBlock) {
+      table.style.background = main;
+      if (style === 'gradient-round') table.style.border = `1px solid ${alphaColor(accent, 0.4, '#ffffff')}`;
+      const tr = document.createElement('tr');
+      tr.appendChild(makeWechatCell(titleHTML, {
+        padding: tag === 'H1' ? '13px 18px' : '10px 16px',
+        textAlign: style === 'gradient-round' ? 'center' : 'left',
+        color: '#FFFFFF',
+        fontSize: size,
+        fontWeight: '800',
+        lineHeight: '1.5',
+        letterSpacing: '0.03em'
+      }));
+      tbody.appendChild(tr);
+    } else if (isLeftBar) {
+      const tr = document.createElement('tr');
+      tr.appendChild(makeWechatCell('', {
+        width: '5px',
+        padding: '0',
+        background: main
+      }));
+      tr.appendChild(makeWechatCell(titleHTML, {
+        padding: '8px 0 8px 14px',
+        color: style === 'plain' ? text : (accent || main),
+        fontSize: size,
+        fontWeight: style === 'plain' ? '600' : '800',
+        lineHeight: '1.55',
+        letterSpacing: '0.03em',
+        borderBottom: style === 'numbered-divider' ? '1px solid #E5E7EB' : ''
+      }));
+      tbody.appendChild(tr);
+    } else {
+      const trTitle = document.createElement('tr');
+      trTitle.appendChild(makeWechatCell(titleHTML, {
+        padding: isCenter ? '12px 0 8px' : '8px 0 8px',
+        textAlign: isCenter ? 'center' : 'left',
+        color: style === 'center-red' || style === 'underline-blue' ? main : text,
+        fontSize: size,
+        fontWeight: '800',
+        lineHeight: '1.55',
+        letterSpacing: isCenter ? '0.05em' : '0.03em'
+      }));
+      const trLine = document.createElement('tr');
+      const lineWrap = document.createElement('p');
+      lineWrap.style.margin = '0';
+      lineWrap.style.textAlign = isCenter ? 'center' : 'left';
+      const line = document.createElement('span');
+      line.style.display = 'inline-block';
+      line.style.width = isUnderline && style === 'thick-underline' ? '96px' : '48px';
+      line.style.height = isUnderline ? '4px' : '3px';
+      line.style.background = main;
+      line.style.opacity = isUnderline ? '0.85' : '0.45';
+      lineWrap.appendChild(line);
+      trLine.appendChild(makeWechatCell(lineWrap, { padding: '0 0 8px' }));
+      tbody.appendChild(trTitle);
+      tbody.appendChild(trLine);
+    }
+
+    table.appendChild(tbody);
+    h.replaceWith(table);
+  });
+}
+function normalizeWechatThemeComponents(root) {
+  Array.from(root.querySelectorAll('[data-theme-component="numbered-heading"]')).forEach(el => {
+    const parts = extractNumberedHeadingParts(el);
+    el.replaceWith(buildWechatNumberedHeading(parts.numText, parts.titleHTML, { margin: el.style.margin || '1.2em 0 0.8em' }));
+  });
+
+  const { main, accent, sub, text } = getWechatThemeBasics();
+  Array.from(root.querySelectorAll('[data-theme-component="tip-card"]')).forEach(card => {
+    const title = card.querySelector('[data-theme-role="title"]')?.innerHTML || '';
+    const body = card.querySelector('[data-theme-role="body"]')?.innerHTML || card.innerHTML;
+    const table = document.createElement('table');
+    setWechatTableBase(table, card.style.margin || '1em 0');
+    table.style.background = sub;
+    table.style.border = `1px solid ${alphaColor(main, 0.18, '#E5E7EB')}`;
+    const tbody = document.createElement('tbody');
+    const tr = document.createElement('tr');
+    const content = `<p style="margin:0 0 8px;color:${main};font-size:14px;font-weight:800;line-height:1.6;">${title}</p><section style="font-size:14px;color:${text};line-height:1.8;">${body}</section>`;
+    tr.appendChild(makeWechatCell(content, { padding: '18px 20px', color: text, lineHeight: '1.8' }));
+    tbody.appendChild(tr);
+    table.appendChild(tbody);
+    card.replaceWith(table);
+  });
+
+  Array.from(root.querySelectorAll('[data-theme-component="design-heading"]')).forEach(el => {
+    const num = (el.querySelector('[data-theme-role="number"]')?.textContent || '').trim();
+    const title = el.querySelector('[data-theme-role="title"]')?.innerHTML || el.textContent.trim();
+    el.replaceWith(buildWechatNumberedHeading(num, title, { margin: el.style.margin || '1.6em 0 1em' }));
+  });
+}
+function normalizeWechatQuotes(root) {
+  const { mode, main, accent, sub, text, paper, sky } = getWechatThemeBasics();
+  const quoteStyle = mode.quoteStyle;
+  Array.from(root.querySelectorAll('blockquote')).forEach(bq => {
+    Array.from(bq.querySelectorAll('span')).forEach(span => {
+      const styleText = (span.getAttribute('style') || '').toLowerCase();
+      if (styleText.includes('position:absolute') || (!span.textContent.trim() && styleText.includes('height:100%'))) span.remove();
+    });
+    const content = bq.innerHTML;
+    const table = document.createElement('table');
+    setWechatTableBase(table, bq.style.margin || '1.1em 0');
+    const tbody = document.createElement('tbody');
+    const tr = document.createElement('tr');
+    const isCoffee = quoteStyle === 'coffee-note';
+    const isMario = quoteStyle === 'mario-card';
+    const isCard = ['dashed-warm','color-border-round','card-tip','navy-highlight','italic-quotes'].includes(quoteStyle);
+    const isLeftBar = ['blue-bar','left-bar-gray','gray-bg-bar','coffee-note','mario-card','italic-indent'].includes(quoteStyle);
+    table.style.background = isCoffee ? paper : (isMario ? '#FFFFFF' : sub);
+    table.style.border = isMario ? `2px solid ${main}` : `1px solid ${alphaColor(main, 0.22, '#E5E7EB')}`;
+    if (isCard) table.style.border = `1px solid ${alphaColor(main, 0.28, '#E5E7EB')}`;
+    if (isLeftBar) {
+      tr.appendChild(makeWechatCell('', {
+        width: isMario ? '8px' : isCoffee ? '7px' : '5px',
+        padding: '0',
+        background: isCoffee ? accent : main
+      }));
+    }
+    const label = isCoffee ? `<p style="margin:0 0 8px;color:${main};font-size:12px;font-weight:900;letter-spacing:1px;line-height:1.5;">NOTE</p>` : '';
+    tr.appendChild(makeWechatCell(label + content, {
+      padding: isMario ? '18px 20px' : '18px 20px',
+      color: isMario ? text : (quoteStyle === 'navy-highlight' ? main : text),
+      fontSize: bq.style.fontSize || '14px',
+      fontWeight: quoteStyle === 'navy-highlight' ? '700' : '',
+      fontStyle: quoteStyle === 'italic-quotes' || quoteStyle === 'italic-indent' ? 'italic' : '',
+      lineHeight: bq.style.lineHeight || String(STATE.lineHeight),
+      textAlign: quoteStyle === 'italic-quotes' ? 'center' : 'left',
+      verticalAlign: 'top',
+      background: isCoffee ? paper : (isMario ? '#FFFFFF' : sub)
+    }));
+    tbody.appendChild(tr);
+    table.appendChild(tbody);
+    bq.replaceWith(table);
+  });
+}
+function normalizeWechatSeparators(root) {
+  Array.from(root.querySelectorAll('div')).forEach(div => {
+    const styleText = (div.getAttribute('style') || '').toLowerCase();
+    if (!styleText.includes('display:flex') && !styleText.includes('display: flex')) return;
+    const children = Array.from(div.children);
+    if (!children.length || children.some(child => child.tagName !== 'SPAN')) return;
+    const table = document.createElement('table');
+    setWechatTableBase(table, div.style.margin || '2em 0');
+    const tbody = document.createElement('tbody');
+    const tr = document.createElement('tr');
+    children.forEach(child => {
+      child.style.display = 'inline-block';
+      child.style.verticalAlign = 'middle';
+      tr.appendChild(makeWechatCell(child, {
+        width: child.style.width || '',
+        padding: '0 4px',
+        textAlign: 'center',
+        verticalAlign: 'middle'
+      }));
+    });
+    tbody.appendChild(tr);
+    table.appendChild(tbody);
+    div.replaceWith(table);
+  });
+}
 function normalizeWechatPositioning(root) {
   Array.from(root.querySelectorAll('span')).forEach(span => {
     if ((span.style.position || '').toLowerCase() !== 'absolute') return;
@@ -894,6 +1213,10 @@ function normalizeWechatPositioning(root) {
 function prepareWechatCompatibility(root) {
   normalizeImagePairs(root);
   normalizeWechatLists(root);
+  normalizeWechatThemeComponents(root);
+  normalizeWechatHeadings(root);
+  normalizeWechatQuotes(root);
+  normalizeWechatSeparators(root);
   normalizeWechatPositioning(root);
 }
 function sanitizeContentHTML(html) {
