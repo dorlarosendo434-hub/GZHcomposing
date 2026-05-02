@@ -782,11 +782,11 @@ function buildWechatListMarker(list, idx, mode, c) {
   } else if (mode.id === 'coffee-journal') {
     marker.style.background = c.main;
     marker.style.color = '#FFFFFF';
-    marker.style.borderRadius = '50%';
+    marker.style.borderRadius = '6px';
     marker.style.fontSize = '10px';
-    marker.style.lineHeight = '22px';
-    marker.style.width = '22px';
-    marker.style.height = '22px';
+    marker.style.lineHeight = '20px';
+    marker.style.width = '24px';
+    marker.style.height = '20px';
   } else if (mode.id === 'tutorial' && isOrdered) {
     marker.style.background = c.main;
     marker.style.color = '#FFFFFF';
@@ -836,18 +836,20 @@ function normalizeWechatLists(root) {
         itemTable.style.borderRadius = '12px';
         itemTable.style.background = '#FFFFFF';
         itemTable.style.boxShadow = `0 3px 12px ${alphaColor(c.main, 0.06, 'rgba(200,135,78,0.06)')}`;
+        itemTable.style.tableLayout = 'auto';
       }
 
       const tbody = document.createElement('tbody');
       const tr = document.createElement('tr');
       const markerTd = document.createElement('td');
       const contentTd = document.createElement('td');
-      markerTd.style.width = mode.id === 'mario-theme' || mode.id === 'coffee-journal' ? '42px' : '28px';
+      markerTd.style.width = mode.id === 'mario-theme' ? '42px' : mode.id === 'coffee-journal' ? '34px' : '28px';
       markerTd.style.verticalAlign = 'top';
-      markerTd.style.padding = mode.id === 'mario-theme' || mode.id === 'coffee-journal' ? '12px 0 10px 12px' : '0 8px 6px 0';
+      markerTd.style.padding = mode.id === 'mario-theme' ? '12px 0 10px 12px' : mode.id === 'coffee-journal' ? '10px 0 9px 10px' : '0 8px 6px 0';
       markerTd.style.textAlign = 'center';
       contentTd.style.verticalAlign = 'top';
-      contentTd.style.padding = mode.id === 'mario-theme' || mode.id === 'coffee-journal' ? '12px 14px 10px 8px' : '0 0 6px 0';
+      contentTd.style.width = 'auto';
+      contentTd.style.padding = mode.id === 'mario-theme' ? '12px 14px 10px 8px' : mode.id === 'coffee-journal' ? '9px 12px 9px 6px' : '0 0 6px 0';
       contentTd.style.fontSize = li.style.fontSize || '15px';
       contentTd.style.lineHeight = li.style.lineHeight || String(STATE.lineHeight);
       contentTd.style.letterSpacing = li.style.letterSpacing || '0.03em';
@@ -855,7 +857,7 @@ function normalizeWechatLists(root) {
       contentTd.innerHTML = li.innerHTML;
 
       if (mode.id === 'coffee-journal') {
-        contentTd.style.background = `linear-gradient(135deg,#FFFFFF,${journalPaper})`;
+        contentTd.style.background = 'transparent';
       }
 
       markerTd.appendChild(buildWechatListMarker(list, idx, mode, c));
@@ -2261,15 +2263,15 @@ function applyPreviewStyles() {
     }
     if (mode.id === 'coffee-journal') {
       li.style.position = 'relative';
-      li.style.marginBottom = '10px';
-      li.style.padding = '11px 14px 11px 46px';
+      li.style.marginBottom = '8px';
+      li.style.padding = '9px 12px 9px 42px';
       li.style.border = `1px solid ${alphaColor(c.main, 0.24, '#E7D6BE')}`;
-      li.style.borderRadius = '12px';
+      li.style.borderRadius = '10px';
       li.style.background = '#FFFFFF';
-      li.style.boxShadow = `0 3px 12px ${alphaColor(c.main, 0.06, 'rgba(200,135,78,0.06)')}`;
+      li.style.boxShadow = `0 2px 8px ${alphaColor(c.main, 0.05, 'rgba(200,135,78,0.05)')}`;
       if (!li.dataset.coffeeItemAdded) {
         const num = String(liIdx + 1).padStart(2, '0');
-        li.innerHTML = `<span style="position:absolute;left:14px;top:12px;width:22px;height:22px;border-radius:50%;background:${c.main};color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1;">${num}</span>${li.innerHTML}`;
+        li.innerHTML = `<span style="position:absolute;left:12px;top:10px;width:22px;height:20px;border-radius:6px;background:${c.main};color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1;">${num}</span>${li.innerHTML}`;
         li.dataset.coffeeItemAdded = '1';
       }
     }
@@ -2302,12 +2304,66 @@ function applyThemedComponents(c) {
   const sub = c.sub || alphaColor(main, 0.08, '#f5f5f5');
   const text = c.text || '#333333';
   const grad = c.gradient || `linear-gradient(135deg, ${main}, ${accent})`;
+  const mode = MODES.find(m => m.id === STATE.mode) || MODES[0];
+  const journalPaper = c.paper || c.sub || '#FFF6E8';
 
   preview.querySelectorAll('[data-theme-component="numbered-heading"]').forEach(el => {
     el.style.borderBottom = `1px solid ${alphaColor(main, 0.24, '#d4d4d4')}`;
     const num = el.querySelector('[data-theme-role="number"]');
     const divider = el.querySelector('[data-theme-role="divider"]');
     const title = el.querySelector('[data-theme-role="title"]');
+    if (mode.id === 'coffee-journal') {
+      const numWrap = num ? num.parentElement : null;
+      const titleWrap = title ? title.parentElement : null;
+      el.style.display = 'flex';
+      el.style.alignItems = 'center';
+      el.style.gap = '10px';
+      el.style.margin = '1.4em 0 0.9em';
+      el.style.padding = '11px 14px';
+      el.style.border = `1px solid ${alphaColor(main,0.22,'#E7D6BE')}`;
+      el.style.borderLeft = `4px solid ${main}`;
+      el.style.borderRadius = '10px';
+      el.style.background = `linear-gradient(90deg, ${journalPaper} 0%, #FFFFFF 78%)`;
+      el.style.boxShadow = `0 3px 12px ${alphaColor(main,0.06,'rgba(200,135,78,0.06)')}`;
+      if (numWrap) {
+        numWrap.style.order = '1';
+        numWrap.style.minWidth = '0';
+        numWrap.style.paddingRight = '0';
+        numWrap.style.textAlign = 'left';
+      }
+      if (num) {
+        num.style.display = 'inline-flex';
+        num.style.alignItems = 'center';
+        num.style.justifyContent = 'center';
+        num.style.width = '28px';
+        num.style.height = '28px';
+        num.style.borderRadius = '8px';
+        num.style.background = main;
+        num.style.color = '#FFFFFF';
+        num.style.fontSize = '13px';
+        num.style.letterSpacing = '0';
+        num.style.boxShadow = `0 3px 0 ${alphaColor(main,0.14,'rgba(200,135,78,0.14)')}`;
+      }
+      if (titleWrap) {
+        titleWrap.style.order = '2';
+        titleWrap.style.flex = '1';
+        titleWrap.style.minWidth = '0';
+      }
+      if (divider) {
+        divider.style.order = '3';
+        divider.style.width = '28px';
+        divider.style.height = '1px';
+        divider.style.background = accent;
+        divider.style.opacity = '0.55';
+        divider.style.margin = '0';
+        divider.style.flexShrink = '0';
+      }
+      if (title) {
+        title.style.color = text;
+        title.style.fontSize = '17px';
+      }
+      return;
+    }
     if (num) num.style.color = main;
     if (divider) divider.style.background = alphaColor(main, 0.28, '#c8c8c8');
     if (title) title.style.color = main;
@@ -2556,20 +2612,22 @@ function applyHeadingStyle(h, style, c, tag) {
       break;
     case 'coffee-label':
       h.style.color = c.text;
-      h.style.background = 'transparent';
-      h.style.border = 'none';
-      h.style.boxShadow = 'none';
-      h.style.padding = '12px 0 8px';
+      h.style.background = `linear-gradient(90deg, ${journalPaper} 0%, #FFFFFF 78%)`;
+      h.style.border = `1px solid ${alphaColor(c.main,0.22,'#E7D6BE')}`;
+      h.style.borderLeft = `4px solid ${c.main}`;
+      h.style.boxShadow = `0 3px 12px ${alphaColor(c.main,0.06,'rgba(200,135,78,0.06)')}`;
+      h.style.padding = tag === 'H1' ? '12px 14px' : '10px 12px';
       h.style.display = 'flex';
       h.style.alignItems = 'center';
-      h.style.gap = '10px';
+      h.style.gap = '8px';
       h.style.textAlign = 'left';
       h.style.letterSpacing = '0.02em';
-      h.style.fontSize = tag === 'H1' ? '22px' : tag === 'H2' ? '18px' : '16px';
+      h.style.borderRadius = '10px';
+      h.style.fontSize = tag === 'H1' ? '20px' : tag === 'H2' ? '17px' : '15px';
       if (!h.dataset.coffeeBadgeAdded) {
         const allHeadings = Array.from(h.parentElement.querySelectorAll('h1,h2,h3'));
         const num = String(allHeadings.indexOf(h) + 1).padStart(2, '0');
-        h.innerHTML = `<span style="display:inline-flex;align-items:center;justify-content:center;min-width:42px;height:34px;border-radius:10px;background:${journalRose};color:#fff;font-size:18px;font-weight:900;line-height:1;box-shadow:0 4px 0 ${alphaColor(c.main,0.16,'rgba(200,135,78,0.16)')};">${num}</span><span style="display:inline-block;background:${journalPaper};border-radius:999px;padding:7px 14px;border:1px solid ${alphaColor(c.main,0.24,'#E7D6BE')};min-width:0;">${h.innerHTML}</span><span style="width:34px;height:1px;background:${c.accent};opacity:.7;flex-shrink:0;"></span>`;
+        h.innerHTML = `<span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;background:${c.main};color:#fff;font-size:13px;font-weight:900;line-height:1;flex-shrink:0;box-shadow:0 3px 0 ${alphaColor(c.main,0.14,'rgba(200,135,78,0.14)')};">${num}</span><span style="display:inline-block;min-width:0;color:${c.text};">${h.innerHTML}</span><span style="width:28px;height:1px;background:${c.accent};opacity:.55;flex-shrink:0;margin-left:auto;"></span>`;
         h.dataset.coffeeBadgeAdded = '1';
       }
       break;
