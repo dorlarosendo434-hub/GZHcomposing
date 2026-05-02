@@ -331,11 +331,12 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 // ===================================================================
 // STATE
 // ===================================================================
+const DEFAULT_MODE_ID = 'tutorial';
 const STATE = {
-  mode: 'ai-tech',
-  titleFont: 0,
+  mode: DEFAULT_MODE_ID,
+  titleFont: 1,
   bodyFont: 0,
-  colorScheme: 1, // index in COLOR_SCHEMES; 0=经典黑白
+  colorScheme: 0, // index in COLOR_SCHEMES; 0=经典黑白
   customColors: null,
   lineHeight: 1.75,
   paraSpacing: 1.0,
@@ -408,13 +409,13 @@ const COLOR_SCHEMES = [
 // ===================================================================
 const MODES = [
   {
-    id:'ai-tech', name:'AI科技报告',
-    desc:'科技蓝 · 极简风格',
-    titleFont:0, bodyFont:0, color:1,
+    id:'tutorial', name:'教程干货',
+    desc:'黑体 · 结构清晰',
+    titleFont:1, bodyFont:0, color:0,
     lineHeight:1.75, paraSpacing:1.0,
-    headingStyle:'underline-blue',
-    quoteStyle:'blue-bar',
-    hrStyle:'thin-line'
+    headingStyle:'color-block',
+    quoteStyle:'left-bar-gray',
+    hrStyle:'numbered'
   },
   {
     id:'deep-read', name:'深度长文',
@@ -426,13 +427,13 @@ const MODES = [
     hrStyle:'center-short'
   },
   {
-    id:'tutorial', name:'教程干货',
-    desc:'黑体 · 结构清晰',
-    titleFont:1, bodyFont:0, color:0,
-    lineHeight:1.75, paraSpacing:1.0,
-    headingStyle:'color-block',
-    quoteStyle:'left-bar-gray',
-    hrStyle:'numbered'
+    id:'knowledge-blogger', name:'知识博主',
+    desc:'深海蓝 · 编号标题',
+    titleFont:3, bodyFont:1, color:7,
+    lineHeight:2.0, paraSpacing:0.8,
+    headingStyle:'numbered-divider',
+    quoteStyle:'navy-highlight',
+    hrStyle:'none'
   },
   {
     id:'japanese', name:'日系文艺',
@@ -461,16 +462,6 @@ const MODES = [
     quoteStyle:'gray-bg-bar',
     hrStyle:'double-line'
   },
-
-  {
-    id:'knowledge-blogger', name:'知识博主',
-    desc:'深海蓝 · 编号标题',
-    titleFont:3, bodyFont:1, color:7,
-    lineHeight:2.0, paraSpacing:0.8,
-    headingStyle:'numbered-divider',
-    quoteStyle:'navy-highlight',
-    hrStyle:'none'
-  },
   {
     id:'mario-theme', name:'马里奥主题',
     desc:'红蓝黄绿 · 游戏感',
@@ -494,17 +485,16 @@ const MODES = [
 // ===================================================================
 // DEFAULT CONTENT
 // ===================================================================
-const DEFAULT_HTML = `<p>支持 <strong>9种排版模式</strong>、6种标题字体、4种正文字体、${COLOR_SCHEMES.length}套配色方案。每种模式都配备了现代感的渐变装饰条、精致引用卡片和细腻的排版细节，让每篇文章都充满设计感。</p>
+const DEFAULT_HTML = `<p>支持 <strong>8种排版模式</strong>、6种标题字体、4种正文字体、${COLOR_SCHEMES.length}套配色方案。每种模式都配备了现代感的渐变装饰条、精致引用卡片和细腻的排版细节，让每篇文章都充满设计感。</p>
 <h2>排版模式一览</h2>
 <p>点击顶部「排版模式」切换风格。每种模式包含完整的字体、配色、标题渐变装饰、引用卡片和分割线组合：</p>
 <ul>
-<li><strong>AI科技报告</strong> — 渐变装饰条 + 蓝紫科技配色</li>
-<li><strong>深度长文</strong> — 居中渐变装饰 + 宋体经典阅读</li>
 <li><strong>教程干货</strong> — 渐变色块标题 + 紧凑排版</li>
+<li><strong>深度长文</strong> — 居中渐变装饰 + 宋体经典阅读</li>
+<li><strong>知识博主</strong> — 渐变编号标题 + 深海蓝卡片</li>
 <li><strong>日系文艺</strong> — 侧边渐变条 + 莫兰迪柔和配色</li>
 <li><strong>甜系种草</strong> — 渐变胶囊标题 + 粉蓝马卡龙</li>
 <li><strong>品牌商务</strong> — 底部渐变条 + 稳重专业</li>
-<li><strong>知识博主</strong> — 渐变编号标题 + 深海蓝卡片</li>
 <li><strong>马里奥主题</strong> — 红蓝黄绿主题色 + 金币编号与游戏感卡片</li>
 <li><strong>轻手账咖啡馆</strong> — 奶油纸感卡片 + 咖啡棕手账标题</li>
 </ul>
@@ -539,7 +529,7 @@ const divider = $('divider');
 // ===================================================================
 window.addEventListener('DOMContentLoaded', () => {
   editor.innerHTML = DEFAULT_HTML;
-  applyMode(MODES[0]);
+  applyMode(MODES.find(m => m.id === DEFAULT_MODE_ID) || MODES[0]);
   updatePreview();
   setupDivider();
   setupScrollSync();
@@ -776,7 +766,7 @@ function buildWechatListMarker(list, idx, mode, c) {
   const marker = document.createElement('span');
   const isOrdered = list.tagName === 'OL';
   const isCardMode = mode.id === 'mario-theme' || mode.id === 'coffee-journal' || (mode.id === 'tutorial' && isOrdered);
-  marker.textContent = isCardMode ? String(idx + 1).padStart(2, '0') : (isOrdered ? `${idx + 1}.` : (mode.id === 'ai-tech' ? '▪' : '•'));
+  marker.textContent = isCardMode ? String(idx + 1).padStart(2, '0') : (isOrdered ? `${idx + 1}.` : '•');
   marker.style.display = 'inline-block';
   marker.style.textAlign = 'center';
   marker.style.fontWeight = isCardMode ? '900' : '700';
@@ -1276,7 +1266,7 @@ function insertTipCard() {
   const textColor = c.text || '#333';
   const accentColor = c.main || '#133363';
   const html = `<div data-theme-component="tip-card" style="background:${bgColor};border-radius:12px;padding:20px 24px;margin:1em 0;">
-    <div data-theme-role="title" style="font-size:14px;font-weight:700;color:${accentColor};margin-bottom:8px;">💡 提示</div>
+    <div data-theme-role="title" style="font-size:14px;font-weight:700;color:${accentColor};margin-bottom:8px;">提示</div>
     <div data-theme-role="body" style="font-size:14px;color:${textColor};line-height:1.8;">在此输入提示内容</div>
   </div><p><br></p>`;
   document.execCommand('insertHTML', false, html);
@@ -2241,12 +2231,6 @@ function applyPreviewStyles() {
         h.dataset.stepAdded = '1';
       }
     }
-    // AI-tech: left gradient bar + left padding
-    if (mode.id === 'ai-tech') {
-      h.style.paddingLeft = '16px';
-      h.style.borderLeft = '4px solid transparent';
-      h.style.borderImage = `linear-gradient(180deg, ${c.main}, ${c.accent}) 1`;
-    }
     // Chinese: traditional wide spacing
     if (mode.id === 'chinese') {
       h.style.letterSpacing = '0.15em';
@@ -2262,29 +2246,15 @@ function applyPreviewStyles() {
     // Reset all styles
     bq.style.cssText = 'margin:1em 0;line-height:' + STATE.lineHeight + ';letter-spacing:0.02em;';
     applyQuoteStyle(bq, mode.quoteStyle, c);
-    // AI-tech: add lightbulb icon
-    if (mode.id === 'ai-tech' && !bq.dataset.iconAdded) {
-      bq.innerHTML = '<span style="font-size:18px;margin-right:6px;vertical-align:middle">💡</span>' + bq.innerHTML;
-      bq.dataset.iconAdded = '1';
-    }
-    // Deep-read: large quotes decoration
-    if (mode.id === 'deep-read' && !bq.dataset.quoteDecoAdded) {
-      bq.innerHTML = '<span style="font-size:28px;color:' + c.main + ';opacity:0.5;margin-right:4px;vertical-align:top;line-height:1">「</span>' + bq.innerHTML + '<span style="font-size:28px;color:' + c.main + ';opacity:0.5;margin-left:4px;vertical-align:bottom;line-height:1">」</span>';
-      bq.dataset.quoteDecoAdded = '1';
-    }
     // Tutorial: tip card style
     if (mode.id === 'tutorial') {
       bq.style.background = c.sub || '#F0F7FF';
       bq.style.borderRadius = '12px';
-      bq.style.padding = '18px 20px 18px 48px';
-      bq.style.position = 'relative';
+      bq.style.padding = '18px 20px';
+      bq.style.position = 'static';
       bq.style.border = 'none';
       bq.style.borderImage = 'none';
       bq.style.borderLeft = '4px solid ' + c.main;
-      if (!bq.dataset.tipAdded) {
-        bq.innerHTML = '<span style="position:absolute;left:16px;top:18px;font-size:18px">💡</span>' + bq.innerHTML;
-        bq.dataset.tipAdded = '1';
-      }
     }
     // Sweet: large border-radius + gradient bg
     if (mode.id === 'sweet') {
@@ -2299,10 +2269,6 @@ function applyPreviewStyles() {
       bq.style.background = `linear-gradient(180deg, ${c.sub}, #FFFFFF)`;
       bq.style.boxShadow = `0 6px 0 ${alphaColor(themeSky, 0.18, 'rgba(30,136,229,0.18)')}`;
       bq.style.padding = '18px 20px 18px 22px';
-      if (!bq.dataset.marioQuoteAdded) {
-        bq.innerHTML = `<span style="display:inline-block;background:${c.accent};color:#111827;border:2px solid #111827;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:900;margin-bottom:10px;">重点提示</span><br>${bq.innerHTML}`;
-        bq.dataset.marioQuoteAdded = '1';
-      }
     }
     if (mode.id === 'coffee-journal') {
       bq.style.borderRadius = '14px';
@@ -2376,10 +2342,6 @@ function applyPreviewStyles() {
   preview.querySelectorAll('ul,ol').forEach(list => {
     list.style.paddingLeft = '1.5em';
     list.style.marginBottom = STATE.paraSpacing + 'em';
-    // AI-tech: square bullets
-    if (mode.id === 'ai-tech' && list.tagName === 'UL') {
-      list.style.listStyleType = 'square';
-    }
     // Tutorial: styled ordered list numbers
     if (mode.id === 'tutorial' && list.tagName === 'OL') {
       list.style.listStyle = 'none';
@@ -2846,7 +2808,6 @@ function applyQuoteStyle(bq, style, c) {
       bq.style.background = c.sub;
       bq.style.borderRadius = '12px';
       bq.style.boxShadow = '0 2px 12px rgba(0,0,0,0.05)';
-      bq.innerHTML = `<span style="font-size:32px;color:${c.main};opacity:0.6;vertical-align:top;line-height:1;margin-right:6px">❝</span>${bq.innerHTML}<span style="font-size:32px;color:${c.main};opacity:0.6;vertical-align:bottom;line-height:1;margin-left:6px">❞</span>`;
       break;
     case 'left-bar-gray':
       bq.style.borderLeft = `4px solid transparent`;
@@ -2866,8 +2827,6 @@ function applyQuoteStyle(bq, style, c) {
       bq.style.color = c.text;
       bq.style.boxShadow = `inset 0 0 0 1.5px ${c.main}40`;
       bq.style.position = 'relative';
-      // Add a subtle icon
-      bq.innerHTML = `<span style="display:inline-block;margin-bottom:8px;font-size:18px;opacity:0.7">✦</span><br>${bq.innerHTML}`;
       break;
     case 'color-border-round':
       bq.style.border = 'none';
@@ -2895,8 +2854,6 @@ function applyQuoteStyle(bq, style, c) {
       bq.style.color = c.text;
       bq.style.position = 'relative';
       bq.style.boxShadow = `inset 0 0 0 2px ${c.main}50`;
-      // decorative corner marks
-      bq.innerHTML = `<span style="position:absolute;top:8px;left:10px;color:${c.main};opacity:0.4;font-size:20px">『</span>${bq.innerHTML}<span style="position:absolute;bottom:8px;right:10px;color:${c.main};opacity:0.4;font-size:20px">』</span>`;
       break;
     case 'italic-indent':
       bq.style.fontStyle = 'italic';
