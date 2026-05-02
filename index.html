@@ -417,7 +417,7 @@ const MODES = [
     desc:'黑体 · 结构清晰',
     titleFont:1, bodyFont:0, color:7,
     lineHeight:1.75, paraSpacing:1.0,
-    headingStyle:'numbered-divider',
+    headingStyle:'color-block',
     quoteStyle:'left-bar-gray',
     hrStyle:'numbered'
   },
@@ -493,7 +493,7 @@ const DEFAULT_HTML = `<p>支持 <strong>8种排版模式</strong>、6种标题�
 <h2>排版模式一览</h2>
 <p>点击顶部「排版模式」切换风格。每种模式包含完整的字体、配色、标题渐变装饰、引用卡片和分割线组合：</p>
 <ul>
-<li><strong>教程干货</strong> — 左侧渐变条 + 底部分隔线</li>
+<li><strong>教程干货</strong> — 渐变色块标题 + 紧凑排版</li>
 <li><strong>深度长文</strong> — 居中渐变装饰 + 宋体经典阅读</li>
 <li><strong>知识博主</strong> — 渐变编号标题 + 深海蓝卡片</li>
 <li><strong>日系文艺</strong> — 侧边渐变条 + 莫兰迪柔和配色</li>
@@ -948,6 +948,46 @@ function normalizeWechatInlineLayouts(root) {
       if (spans[1]) {
         spans[1].style.display = 'inline';
         spans[1].style.verticalAlign = 'middle';
+      }
+    }
+
+    if (['knowledge-blogger','japanese','business','deep-read'].includes(mode.id)) {
+      h.querySelectorAll('.heading-bar').forEach(bar => bar.remove());
+      h.style.display = 'block';
+      h.style.width = '100%';
+      h.style.maxWidth = '100%';
+      h.style.boxSizing = 'border-box';
+      h.style.background = 'transparent';
+      h.style.boxShadow = 'none';
+      h.style.borderImage = 'none';
+      h.style.position = 'static';
+      if (mode.id === 'knowledge-blogger') {
+        h.style.color = main;
+        h.style.padding = '12px 0 12px 14px';
+        h.style.borderLeft = `4px solid ${main}`;
+        h.style.borderBottom = `1px solid ${alphaColor(main, 0.16, '#E5E7EB')}`;
+        h.style.textAlign = 'left';
+      }
+      if (mode.id === 'japanese') {
+        h.style.color = accent;
+        h.style.padding = '8px 0 8px 14px';
+        h.style.borderLeft = `4px solid ${main}`;
+        h.style.borderBottom = 'none';
+        h.style.textAlign = 'left';
+      }
+      if (mode.id === 'business') {
+        h.style.color = text;
+        h.style.padding = '8px 0 10px';
+        h.style.borderLeft = 'none';
+        h.style.borderBottom = `4px solid ${main}`;
+        h.style.textAlign = 'left';
+      }
+      if (mode.id === 'deep-read') {
+        h.style.color = text;
+        h.style.padding = '12px 0 10px';
+        h.style.borderLeft = 'none';
+        h.style.borderBottom = `2px solid ${alphaColor(main, 0.32, '#D4D4D4')}`;
+        h.style.textAlign = 'center';
       }
     }
   });
