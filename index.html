@@ -560,9 +560,12 @@ function execHeading(tag) {
 }
 
 function toggleBlockFormat(tag) {
-  const fallback = tag === 'BLOCKQUOTE' ? 'P' : 'P';
   const active = isSelectionInBlockFormat(tag);
-  document.execCommand('formatBlock', false, active ? fallback : tag);
+  if (tag === 'BLOCKQUOTE' && active) {
+    unwrapSelectedBlockquotes();
+  } else {
+    document.execCommand('formatBlock', false, active ? 'P' : tag);
+  }
   editor.focus();
   scheduleUpdate();
   updateToolbarStates();
@@ -610,6 +613,41 @@ function isSelectionInBlockFormat(tag) {
   const startBlock = closestBlock(range.startContainer);
   const endBlock = closestBlock(range.endContainer);
   return !!startBlock && !!endBlock && startBlock.tagName === tag && endBlock.tagName === tag;
+}
+
+function unwrapSelectedBlockquotes() {
+  const range = getSelectionRangeInEditor();
+  if (!range) return;
+  const blockquotes = new Set();
+  const start = closestTag(range.startContainer, 'BLOCKQUOTE');
+  const end = closestTag(range.endContainer, 'BLOCKQUOTE');
+  if (start) blockquotes.add(start);
+  if (end) blockquotes.add(end);
+  editor.querySelectorAll('blockquote').forEach(el => {
+    try {
+      if (range.intersectsNode(el)) blockquotes.add(el);
+    } catch (e) {}
+  });
+  Array.from(blockquotes).forEach(unwrapBlockquoteElement);
+}
+
+function isBlockContentElement(node) {
+  return node?.nodeType === Node.ELEMENT_NODE && /^(P|H1|H2|H3|BLOCKQUOTE|UL|OL|LI|PRE|DIV|SECTION|TABLE|HR)$/i.test(node.tagName);
+}
+
+function unwrapBlockquoteElement(bq) {
+  if (!bq || !bq.parentNode) return;
+  const frag = document.createDocumentFragment();
+  const hasBlockChild = Array.from(bq.childNodes).some(isBlockContentElement);
+  if (hasBlockChild) {
+    while (bq.firstChild) frag.appendChild(bq.firstChild);
+  } else {
+    const p = document.createElement('p');
+    while (bq.firstChild) p.appendChild(bq.firstChild);
+    if (!p.childNodes.length) p.appendChild(document.createElement('br'));
+    frag.appendChild(p);
+  }
+  bq.replaceWith(frag);
 }
 
 function setToolbarActive(id, active) {
