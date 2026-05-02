@@ -336,7 +336,7 @@ const STATE = {
   mode: DEFAULT_MODE_ID,
   titleFont: 1,
   bodyFont: 0,
-  colorScheme: 0, // index in COLOR_SCHEMES; 0=经典黑白
+  colorScheme: 7, // index in COLOR_SCHEMES; 7=深海蓝
   customColors: null,
   lineHeight: 1.75,
   paraSpacing: 1.0,
@@ -415,9 +415,9 @@ const MODES = [
   {
     id:'tutorial', name:'教程干货',
     desc:'黑体 · 结构清晰',
-    titleFont:1, bodyFont:0, color:0,
+    titleFont:1, bodyFont:0, color:7,
     lineHeight:1.75, paraSpacing:1.0,
-    headingStyle:'color-block',
+    headingStyle:'numbered-divider',
     quoteStyle:'left-bar-gray',
     hrStyle:'numbered'
   },
@@ -493,7 +493,7 @@ const DEFAULT_HTML = `<p>支持 <strong>8种排版模式</strong>、6种标题�
 <h2>排版模式一览</h2>
 <p>点击顶部「排版模式」切换风格。每种模式包含完整的字体、配色、标题渐变装饰、引用卡片和分割线组合：</p>
 <ul>
-<li><strong>教程干货</strong> — 渐变色块标题 + 紧凑排版</li>
+<li><strong>教程干货</strong> — 左侧渐变条 + 底部分隔线</li>
 <li><strong>深度长文</strong> — 居中渐变装饰 + 宋体经典阅读</li>
 <li><strong>知识博主</strong> — 渐变编号标题 + 深海蓝卡片</li>
 <li><strong>日系文艺</strong> — 侧边渐变条 + 莫兰迪柔和配色</li>
@@ -2226,15 +2226,6 @@ function applyPreviewStyles() {
     }
     h.style.fontSize = size;
 
-    // Tutorial: STEP numbering
-    if (mode.id === 'tutorial' && (tag === 'H2' || tag === 'H3')) {
-      if (!h.dataset.stepAdded) {
-        const allH = Array.from(preview.querySelectorAll('h2,h3'));
-        const stepNum = allH.indexOf(h) + 1;
-        h.innerHTML = `<span style="font-size:11px;font-weight:700;color:#fff;background:${c.main};padding:2px 8px;border-radius:4px;margin-right:8px;vertical-align:middle">STEP ${stepNum}</span>` + h.innerHTML;
-        h.dataset.stepAdded = '1';
-      }
-    }
     // Chinese: traditional wide spacing
     if (mode.id === 'chinese') {
       h.style.letterSpacing = '0.15em';
