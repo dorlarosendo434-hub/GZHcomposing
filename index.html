@@ -150,6 +150,12 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 .img-upload-area:hover{border-color:var(--primary);color:var(--primary)}
 .img-upload-area input[type=file]{display:none}
 .img-layout-note{font-size:11px;color:var(--text3);line-height:1.5;margin:-2px 0 8px}
+.hr-panel{position:absolute;top:100%;left:0;background:var(--white);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 16px rgba(0,0,0,.12);width:220px;padding:10px;z-index:240;display:none}
+.hr-panel.show{display:block}
+.hr-option{width:100%;padding:8px 10px;border-radius:4px;color:var(--brand);font-size:12px;text-align:left;display:block}
+.hr-option:hover{background:var(--brand-soft)}
+.hr-preview{display:flex;align-items:center;gap:6px;margin-top:4px;color:var(--text3)}
+.hr-preview span{display:inline-block}
 
 /* ===== Help Modal ===== */
 .help-content{font-size:13px;line-height:1.8;color:var(--text2)}
@@ -204,6 +210,7 @@ input,select,textarea{font-family:inherit;font-size:inherit}
       <span class="tb-sep"></span>
       <button class="tb-btn" id="btnQuote" title="引用" onclick="execCmd('formatBlock','BLOCKQUOTE')">❝</button>
       <button class="tb-btn" title="代码块" onclick="insertCodeBlock()">⟨/⟩</button>
+      <button class="tb-btn" title="换行" onclick="insertLineBreak()">↵</button>
       <button class="tb-btn" id="btnUl" title="无序列表" onclick="execCmd('insertUnorderedList')">•≡</button>
       <button class="tb-btn" id="btnOl" title="有序列表" onclick="execCmd('insertOrderedList')">1.</button>
       <span class="tb-sep"></span>
@@ -260,7 +267,14 @@ input,select,textarea{font-family:inherit;font-size:inherit}
           <button class="img-insert-btn" onclick="doInsertImage()">插入图片</button>
         </div>
       </div>
-      <button class="tb-btn" title="分割线" onclick="execCmd('insertHorizontalRule')">─</button>
+      <div style="position:relative">
+        <button class="tb-btn" title="分割线样式" onclick="toggleHrPanel()" id="btnHr">─</button>
+        <div class="hr-panel" id="hrPanel">
+          <button class="hr-option" onclick="insertDivider('basic-line')">基础横线<span class="hr-preview"><span style="width:100%;height:1px;background:#CBD5E1"></span></span></button>
+          <button class="hr-option" onclick="insertDivider('dot-line')">短线圆点<span class="hr-preview"><span style="flex:1;height:1px;background:#CBD5E1"></span><span style="width:6px;height:6px;border-radius:50%;background:#94A3B8"></span><span style="flex:1;height:1px;background:#CBD5E1"></span></span></button>
+          <button class="hr-option" onclick="insertDivider('ornament-line')">居中装饰<span class="hr-preview"><span style="flex:1;height:1px;background:#CBD5E1"></span><span style="font-size:12px;color:#94A3B8">✦</span><span style="flex:1;height:1px;background:#CBD5E1"></span></span></button>
+        </div>
+      </div>
       <span class="tb-sep"></span>
       <button class="tb-btn" title="文字高亮" onclick="applyTextHighlight()" id="btnHighlight" style="font-size:13px">🖍</button>
       <button class="tb-btn" title="插入编号标题" onclick="insertNumberedHeading()" style="font-size:12px">01§</button>
@@ -672,6 +686,12 @@ function insertCodeBlock() {
   editor.focus();
   scheduleUpdate();
 }
+function insertLineBreak() {
+  editor.focus();
+  document.execCommand('insertHTML', false, '<br>');
+  scheduleUpdate();
+  updateToolbarStates();
+}
 function escapeHtml(t) {
   return String(t ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
@@ -812,7 +832,7 @@ function sanitizeElementTree(root) {
         return;
       }
       if (['alt','title'].includes(name)) return;
-      if (['data-ending-block','data-ending-type','data-theme-component','data-theme-role','data-layout','data-editor-highlight'].includes(name)) return;
+      if (['data-ending-block','data-ending-type','data-theme-component','data-theme-role','data-layout','data-editor-highlight','data-hr-style'].includes(name)) return;
       node.removeAttribute(attr.name);
     });
 
@@ -1266,6 +1286,24 @@ function toggleImgPanel() {
   }
   const p = $('imgPanel');
   p.classList.toggle('show');
+  $('hrPanel')?.classList.remove('show');
+}
+function toggleHrPanel() {
+  const sel = window.getSelection();
+  if (sel.rangeCount > 0 && editor.contains(sel.anchorNode)) {
+    savedEditorRange = sel.getRangeAt(0).cloneRange();
+  }
+  const p = $('hrPanel');
+  p.classList.toggle('show');
+  $('imgPanel')?.classList.remove('show');
+}
+function insertDivider(style) {
+  restoreEditorRange(savedEditorRange);
+  savedEditorRange = null;
+  insertSafeHTML(`<hr data-hr-style="${escapeAttr(style)}"><p><br></p>`);
+  $('hrPanel')?.classList.remove('show');
+  editor.focus();
+  scheduleUpdate();
 }
 function switchImgTab(tab, btn) {
   $('imgTabUpload').style.display = tab === 'upload' ? '' : 'none';
@@ -2502,6 +2540,10 @@ function applyPreviewStyles() {
   preview.querySelectorAll('hr').forEach(hr => {
     hr.style.cssText = '';
     hr.style.margin = '1.5em 0';
+    if (hr.dataset.hrStyle) {
+      applyHrStyle(hr, hr.dataset.hrStyle, c);
+      return;
+    }
     // Sweet: wave line
     if (mode.id === 'sweet') {
       hr.outerHTML = `<div style="text-align:center;margin:2em 0;font-size:18px;letter-spacing:8px;color:${c.main};opacity:0.5">∼∼∼∼∼</div>`;
@@ -3133,6 +3175,17 @@ function applyHrStyle(hr, style, c) {
   hr.style.overflow = 'visible';
 
   switch(style) {
+    case 'basic-line':
+      hr.style.height = '1px';
+      hr.style.background = alphaColor(c.main, 0.32, '#CBD5E1');
+      hr.style.opacity = '1';
+      break;
+    case 'dot-line':
+      hr.outerHTML = `<div style="margin:2em 0;display:flex;align-items:center;justify-content:center;gap:10px"><span style="flex:1;max-width:92px;height:1px;background:${alphaColor(c.main,0.28,'#CBD5E1')}"></span><span style="width:6px;height:6px;border-radius:50%;background:${c.main};opacity:0.55"></span><span style="flex:1;max-width:92px;height:1px;background:${alphaColor(c.main,0.28,'#CBD5E1')}"></span></div>`;
+      break;
+    case 'ornament-line':
+      hr.outerHTML = `<div style="text-align:center;margin:2em 0;display:flex;align-items:center;justify-content:center;gap:12px"><span style="flex:1;max-width:72px;height:1px;background:${alphaColor(c.main,0.24,'#CBD5E1')}"></span><span style="color:${c.main};font-size:14px;opacity:0.6">✦</span><span style="flex:1;max-width:72px;height:1px;background:${alphaColor(c.main,0.24,'#CBD5E1')}"></span></div>`;
+      break;
     case 'thin-line':
       hr.style.height = '2px';
       hr.style.background = grad;
