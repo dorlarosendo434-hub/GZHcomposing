@@ -552,6 +552,7 @@ window.addEventListener('DOMContentLoaded', () => {
   setupDivider();
   setupScrollSync();
   setupEditorEvents();
+  setupRichCopyEvents();
   updateToolbarStates();
 });
 
@@ -1218,11 +1219,68 @@ function normalizeWechatPositioning(root) {
     span.style.marginRight = span.style.marginRight || '6px';
   });
 }
+function normalizeWechatTipCards(root) {
+  const c = getColors();
+  const main = c.main || '#133363';
+  const sub = c.sub || '#F6F6F6';
+  const text = c.text || '#333333';
+  Array.from(root.querySelectorAll('[data-theme-component="tip-card"]')).forEach(card => {
+    card.style.display = 'block';
+    card.style.width = '100%';
+    card.style.maxWidth = '100%';
+    card.style.boxSizing = 'border-box';
+    card.style.background = sub;
+    card.style.border = 'none';
+    card.style.borderLeft = `4px solid ${main}`;
+    card.style.borderRadius = '10px';
+    card.style.padding = '18px 20px';
+    card.style.margin = '18px 0';
+    card.style.fontFamily = BODY_FONTS[STATE.bodyFont].stack;
+    card.style.fontWeight = '400';
+    card.style.color = text;
+    card.style.lineHeight = '1.8';
+
+    const title = card.querySelector('[data-theme-role="title"]');
+    if (title) {
+      title.style.display = 'block';
+      title.style.margin = '0 0 8px';
+      title.style.padding = '0';
+      title.style.fontSize = '15px';
+      title.style.fontWeight = '700';
+      title.style.lineHeight = '1.6';
+      title.style.color = main;
+      title.style.textIndent = '0';
+      title.style.letterSpacing = '0';
+    }
+
+    const body = card.querySelector('[data-theme-role="body"]');
+    if (body) {
+      body.style.display = 'block';
+      body.style.margin = '0';
+      body.style.padding = '0';
+      body.style.fontSize = '15px';
+      body.style.fontWeight = '400';
+      body.style.lineHeight = '1.8';
+      body.style.color = text;
+      body.style.textIndent = '0';
+      Array.from(body.querySelectorAll('p,div,section,span,strong,b,em,i')).forEach(el => {
+        el.style.fontSize = '15px';
+        el.style.fontWeight = (el.tagName === 'STRONG' || el.tagName === 'B') ? '700' : '400';
+        el.style.lineHeight = '1.8';
+        el.style.color = text;
+        el.style.textIndent = '0';
+        el.style.letterSpacing = '0.02em';
+        if (el.tagName === 'P') el.style.margin = '0 0 8px';
+      });
+    }
+  });
+}
 function prepareWechatCompatibility(root) {
   normalizeImagePairs(root);
   normalizeWechatLists(root);
   normalizeWechatInlineLayouts(root);
   normalizeWechatPositioning(root);
+  normalizeWechatTipCards(root);
 }
 function sanitizeContentHTML(html) {
   const tpl = document.createElement('template');
@@ -1473,6 +1531,15 @@ function getRangeHTML(range) {
   return sanitizeContentHTML(holder.innerHTML || escapeHtml(range.toString()));
 }
 
+function getRangeTextAsParagraphs(range) {
+  return String(range?.toString() || '')
+    .split(/\n{1,}/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => `<p>${escapeHtml(line)}</p>`)
+    .join('');
+}
+
 function unwrapElement(el) {
   if (!el || !el.parentNode) return;
   const parent = el.parentNode;
@@ -1508,17 +1575,48 @@ function insertNumberedHeading() {
 // INSERT TIP CARD
 // ===================================================================
 function insertTipCard() {
+  const range = getSelectionRangeInEditor();
+  const selectedHTML = range && !range.collapsed
+    ? (getRangeHTML(range) || getRangeTextAsParagraphs(range))
+    : '';
+  const html = buildTipCardHTML(selectedHTML);
+  document.execCommand('insertHTML', false, html);
+  editor.focus();
+  scheduleUpdate();
+}
+
+function buildTipCardHTML(bodyHTML) {
   const c = getColors();
   const bgColor = c.sub || '#F6F6F6';
   const textColor = c.text || '#333';
   const accentColor = c.main || '#133363';
-  const html = `<div data-theme-component="tip-card" style="background:${bgColor};border-radius:12px;padding:20px 24px;margin:1em 0;">
-    <div data-theme-role="title" style="font-size:14px;font-weight:700;color:${accentColor};margin-bottom:8px;">提示</div>
-    <div data-theme-role="body" style="font-size:14px;color:${textColor};line-height:1.8;">在此输入提示内容</div>
-  </div><p><br></p>`;
-  document.execCommand('insertHTML', false, html);
-  editor.focus();
-  scheduleUpdate();
+  const body = normalizeTipCardBodyHTML(bodyHTML || '<p>在此输入提示内容</p>', textColor);
+  return `<section data-theme-component="tip-card" style="display:block;background:${bgColor};border-left:4px solid ${accentColor};border-radius:12px;padding:18px 22px;margin:1.2em 0;box-sizing:border-box;width:100%;max-width:100%;">
+    <p data-theme-role="title" style="font-size:15px;font-weight:700;color:${accentColor};line-height:1.6;margin:0 0 8px;">提示</p>
+    <section data-theme-role="body" style="display:block;font-size:15px;font-weight:400;color:${textColor};line-height:1.8;margin:0;padding:0;">${body}</section>
+  </section><p><br></p>`;
+}
+
+function normalizeTipCardBodyHTML(html, textColor) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = sanitizeContentHTML(html || '');
+  const hasBlock = Array.from(tpl.content.childNodes).some(isBlockContentElement);
+  if (!hasBlock) {
+    const text = tpl.content.textContent || '在此输入提示内容';
+    tpl.innerHTML = text.split(/\n{1,}/).map(line => line.trim()).filter(Boolean).map(line => `<p>${escapeHtml(line)}</p>`).join('');
+  }
+  const wrapper = document.createElement('section');
+  wrapper.appendChild(tpl.content.cloneNode(true));
+  Array.from(wrapper.querySelectorAll('p,div,section,span')).forEach(el => {
+    if (el.getAttribute('data-theme-role') === 'title') return;
+    el.style.fontSize = '15px';
+    el.style.fontWeight = '400';
+    el.style.lineHeight = '1.8';
+    el.style.color = textColor;
+    el.style.margin = el.tagName === 'P' ? '0 0 8px' : (el.style.margin || '0');
+    el.style.letterSpacing = '0.02em';
+  });
+  return wrapper.innerHTML || `<p style="font-size:15px;font-weight:400;color:${textColor};line-height:1.8;margin:0;">在此输入提示内容</p>`;
 }
 
 // ===================================================================
@@ -2310,6 +2408,54 @@ function setupEditorEvents() {
   });
 }
 
+function setupRichCopyEvents() {
+  preview.addEventListener('copy', e => {
+    const range = getSelectionRangeWithin(preview);
+    if (!range || range.collapsed || !e.clipboardData) return;
+    const holder = buildSelectedWechatCopyContainer(range);
+    if (!holder || !holder.childNodes.length) return;
+    const html = buildWechatHTMLFromElement(holder, false);
+    e.clipboardData.setData('text/html', html);
+    e.clipboardData.setData('text/plain', holder.textContent || range.toString());
+    e.preventDefault();
+  });
+}
+
+function getSelectionRangeWithin(container) {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return null;
+  const range = sel.getRangeAt(0);
+  const anchor = sel.anchorNode;
+  const focus = sel.focusNode;
+  if ((anchor && container.contains(anchor)) || (focus && container.contains(focus))) return range;
+  return null;
+}
+
+function buildSelectedWechatCopyContainer(range) {
+  const holder = document.createElement('section');
+  const components = getSelectedThemeComponents(range);
+  if (components.length) {
+    components.forEach(component => holder.appendChild(component.cloneNode(true)));
+    return holder;
+  }
+  holder.appendChild(range.cloneContents());
+  return holder;
+}
+
+function getSelectedThemeComponents(range) {
+  const items = new Set();
+  const start = getElementFromNode(range.startContainer)?.closest?.('[data-theme-component]');
+  const end = getElementFromNode(range.endContainer)?.closest?.('[data-theme-component]');
+  if (start && preview.contains(start)) items.add(start);
+  if (end && preview.contains(end)) items.add(end);
+  preview.querySelectorAll('[data-theme-component]').forEach(el => {
+    try {
+      if (range.intersectsNode(el)) items.add(el);
+    } catch (e) {}
+  });
+  return Array.from(items).filter(el => !Array.from(items).some(other => other !== el && other.contains(el)));
+}
+
 // ===================================================================
 // PREVIEW UPDATE
 // ===================================================================
@@ -2747,10 +2893,35 @@ function applyThemedComponents(c) {
 
   preview.querySelectorAll('[data-theme-component="tip-card"]').forEach(el => {
     el.style.background = sub;
+    el.style.display = 'block';
+    el.style.borderLeft = `4px solid ${main}`;
+    el.style.boxSizing = 'border-box';
+    el.style.width = '100%';
+    el.style.maxWidth = '100%';
     const title = el.querySelector('[data-theme-role="title"]');
     const body = el.querySelector('[data-theme-role="body"]');
-    if (title) title.style.color = main;
-    if (body) body.style.color = text;
+    if (title) {
+      title.style.color = main;
+      title.style.fontSize = '15px';
+      title.style.fontWeight = '700';
+      title.style.lineHeight = '1.6';
+      title.style.margin = '0 0 8px';
+    }
+    if (body) {
+      body.style.color = text;
+      body.style.fontSize = '15px';
+      body.style.fontWeight = '400';
+      body.style.lineHeight = '1.8';
+      body.style.margin = '0';
+      Array.from(body.querySelectorAll('p,div,section,span')).forEach(child => {
+        child.style.color = text;
+        child.style.fontSize = '15px';
+        child.style.fontWeight = '400';
+        child.style.lineHeight = '1.8';
+        child.style.letterSpacing = '0.02em';
+        if (child.tagName === 'P') child.style.margin = '0 0 8px';
+      });
+    }
   });
 
   preview.querySelectorAll('[data-theme-component="design-intro"]').forEach(el => {
@@ -3476,10 +3647,14 @@ function toggleMobile() {
 // COPY TO WECHAT - Inline all styles
 // ===================================================================
 function buildWechatHTMLSnippet() {
-  const clone = preview.cloneNode(true);
+  return buildWechatHTMLFromElement(preview, true);
+}
+function buildWechatHTMLFromElement(source, includeBg) {
+  const clone = source.cloneNode(true);
   inlineAllStyles(clone);
   prepareWechatCompatibility(clone);
   clone.innerHTML = sanitizeContentHTML(clone.innerHTML);
+  if (!includeBg) return clone.innerHTML;
   const bg = BG_TEXTURES.find(b => b.id === STATE.bg) || BG_TEXTURES[0];
   let bgStyle = `background:${bg.css};`;
   if (bg.cssBgSize) bgStyle += `background-size:${bg.cssBgSize};`;
