@@ -475,7 +475,7 @@ const MODES = [
     desc:'雅黑 · 专业稳重',
     titleFont:4, bodyFont:0, color:0,
     lineHeight:1.75, paraSpacing:1.0,
-    headingStyle:'thick-underline',
+    headingStyle:'business-card',
     quoteStyle:'gray-bg-bar',
     hrStyle:'double-line'
   },
@@ -1022,7 +1022,7 @@ function normalizeWechatInlineLayouts(root) {
       h.style.gap = '';
     }
     h.style.boxSizing = 'border-box';
-    if (mode.headingStyle === 'gradient-round' || mode.headingStyle === 'color-block') {
+    if (mode.headingStyle === 'gradient-round' || mode.headingStyle === 'color-block' || mode.headingStyle === 'business-card') {
       h.style.display = 'inline-block';
       h.style.width = 'fit-content';
       h.style.maxWidth = '100%';
@@ -1082,7 +1082,44 @@ function normalizeWechatInlineLayouts(root) {
       }
     }
 
-    if (['knowledge-blogger','japanese','business','deep-read'].includes(mode.id)) {
+    if (h.dataset.businessPartAdded || mode.headingStyle === 'business-card') {
+      h.style.display = 'inline-block';
+      h.style.width = 'fit-content';
+      h.style.maxWidth = '100%';
+      h.style.boxSizing = 'border-box';
+      h.style.background = main;
+      h.style.color = '#FFFFFF';
+      h.style.border = 'none';
+      h.style.borderLeft = 'none';
+      h.style.borderBottom = 'none';
+      h.style.borderRadius = '10px';
+      h.style.padding = '22px 24px 12px';
+      h.style.marginTop = '28px';
+      h.style.marginBottom = '18px';
+      h.style.textAlign = 'center';
+      h.style.boxShadow = 'none';
+      h.style.position = 'static';
+      h.style.fontWeight = '800';
+      if (spans[0]) {
+        spans[0].style.display = 'block';
+        spans[0].style.width = 'fit-content';
+        spans[0].style.margin = '-34px auto 8px';
+        spans[0].style.padding = '4px 18px';
+        spans[0].style.borderRadius = '999px';
+        spans[0].style.background = '#F7DEC2';
+        spans[0].style.color = '#A97852';
+        spans[0].style.fontSize = '13px';
+        spans[0].style.fontWeight = '800';
+        spans[0].style.lineHeight = '1.3';
+      }
+      if (spans[1]) {
+        spans[1].style.display = 'block';
+        spans[1].style.color = '#FFFFFF';
+        spans[1].style.lineHeight = '1.25';
+      }
+    }
+
+    if (['knowledge-blogger','japanese','deep-read'].includes(mode.id)) {
       h.querySelectorAll('.heading-bar').forEach(bar => bar.remove());
       h.style.display = 'block';
       h.style.width = '100%';
@@ -3112,6 +3149,32 @@ function applyHeadingStyle(h, style, c, tag) {
       h.style.textAlign = 'left';
       h.style.letterSpacing = '0.03em';
       addGradientBar(h, 'bottom', tag==='H1'?'100%':'80px', '4px', '2px', grad);
+      break;
+    case 'business-card':
+      h.querySelectorAll('.heading-bar').forEach(bar => bar.remove());
+      h.style.color = '#FFFFFF';
+      h.style.background = c.main;
+      h.style.border = 'none';
+      h.style.borderLeft = 'none';
+      h.style.borderBottom = 'none';
+      h.style.borderRadius = '10px';
+      h.style.padding = tag === 'H1' ? '24px 28px 14px' : '22px 24px 12px';
+      h.style.marginTop = '28px';
+      h.style.marginBottom = '18px';
+      h.style.display = 'inline-block';
+      h.style.width = 'fit-content';
+      h.style.maxWidth = '100%';
+      h.style.textAlign = 'center';
+      h.style.letterSpacing = '0.02em';
+      h.style.boxShadow = 'none';
+      h.style.position = 'relative';
+      h.style.fontSize = tag === 'H1' ? '22px' : tag === 'H2' ? '19px' : '17px';
+      if (!h.dataset.businessPartAdded) {
+        const allHeadings = Array.from(h.parentElement.querySelectorAll('h1,h2,h3'));
+        const num = allHeadings.indexOf(h) + 1;
+        h.innerHTML = `<span style="display:block;width:fit-content;margin:-34px auto 8px;padding:4px 18px;border-radius:999px;background:#F7DEC2;color:#A97852;font-size:13px;font-weight:800;line-height:1.3;">Part.${num}</span><span style="display:block;color:#FFFFFF;line-height:1.25;">${h.innerHTML}</span>`;
+        h.dataset.businessPartAdded = '1';
+      }
       break;
     case 'center-red':
       h.style.textAlign = 'center';
