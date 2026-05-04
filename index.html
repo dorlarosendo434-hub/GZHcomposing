@@ -371,12 +371,7 @@ const BG_TEXTURES = [
   { id:'rose-linen', name:'粉麻布', css:'repeating-linear-gradient(0deg, rgba(124,82,72,0.014) 0 1px, transparent 1px 10px), repeating-linear-gradient(90deg, rgba(124,82,72,0.012) 0 1px, transparent 1px 12px), linear-gradient(135deg, rgba(255,255,255,0.72), rgba(235,216,212,0.22)), #F5ECE9', cssBgSize:'12px 12px, 14px 14px, auto' },
   { id:'confetti-paper', name:'彩点纸', css:'radial-gradient(circle at 9% 18%, rgba(232,112,74,0.16) 0 1px, transparent 1.4px), radial-gradient(circle at 22% 62%, rgba(47,143,190,0.14) 0 1.2px, transparent 1.6px), radial-gradient(circle at 41% 26%, rgba(50,55,62,0.12) 0 0.9px, transparent 1.2px), radial-gradient(circle at 64% 72%, rgba(245,164,122,0.14) 0 1.2px, transparent 1.6px), radial-gradient(circle at 78% 16%, rgba(116,132,150,0.10) 0 1.1px, transparent 1.5px), radial-gradient(circle at 93% 46%, rgba(211,202,118,0.12) 0 0.9px, transparent 1.2px), #FEFEFC', cssBgSize:'130px 130px, 146px 146px, 118px 118px, 154px 154px, 170px 170px, 126px 126px' },
   { id:'ivory-fiber', name:'米白纤维', css:'radial-gradient(ellipse at 18% 22%, rgba(172,132,76,0.045) 0 0.7px, transparent 1.2px), radial-gradient(ellipse at 64% 40%, rgba(155,128,78,0.035) 0 0.7px, transparent 1.2px), repeating-linear-gradient(22deg, transparent 0 24px, rgba(170,150,110,0.010) 24px 25px), #FFFDF7', cssBgSize:'58px 56px, 68px 66px, 42px 42px' },
-  { id:'warm-speckle', name:'米色细点', css:'radial-gradient(circle, rgba(115,96,74,0.035) 0 0.55px, transparent 0.9px), radial-gradient(circle, rgba(185,152,118,0.028) 0 0.65px, transparent 1px), linear-gradient(135deg, rgba(255,255,255,0.72), rgba(255,246,239,0.18)), #FFF9F5', cssBgSize:'30px 30px, 48px 48px, auto' },
-  { id:'mint-speckle-paper', name:'青绿纸屑', css:'radial-gradient(circle at 12% 26%, rgba(68,56,44,0.085) 0 0.7px, transparent 1.1px), radial-gradient(circle at 48% 18%, rgba(88,110,114,0.075) 0 0.8px, transparent 1.2px), radial-gradient(circle at 76% 66%, rgba(100,82,42,0.075) 0 0.7px, transparent 1.1px), radial-gradient(circle at 24% 84%, rgba(64,88,92,0.065) 0 0.8px, transparent 1.2px), #F1FBF7', cssBgSize:'108px 108px, 122px 122px, 140px 140px, 96px 96px' },
-  { id:'sage-watercolor', name:'浅绿水彩纸', css:'radial-gradient(ellipse at 28% 24%, rgba(255,255,255,0.42) 0 9%, transparent 32%), radial-gradient(ellipse at 72% 70%, rgba(154,178,114,0.055) 0 10%, transparent 38%), repeating-linear-gradient(105deg, rgba(82,116,72,0.014) 0 1px, transparent 1px 12px), #F6FBEA', cssBgSize:'280px 230px, 250px 220px, 20px 20px' },
-  { id:'sky-watercolor', name:'天蓝水彩', css:'radial-gradient(ellipse at 22% 18%, rgba(255,255,255,0.50) 0 10%, transparent 36%), radial-gradient(ellipse at 74% 78%, rgba(74,188,213,0.060) 0 12%, transparent 40%), repeating-linear-gradient(110deg, rgba(55,150,180,0.012) 0 1px, transparent 1px 13px), #F0FCFE', cssBgSize:'290px 240px, 260px 230px, 22px 22px' },
-  { id:'blush-watercolor', name:'粉色水彩', css:'radial-gradient(ellipse at 18% 28%, rgba(255,255,255,0.55) 0 12%, transparent 38%), radial-gradient(ellipse at 72% 72%, rgba(224,142,154,0.055) 0 12%, transparent 42%), repeating-linear-gradient(25deg, rgba(178,98,112,0.012) 0 1px, transparent 1px 16px), #FFF8F9', cssBgSize:'280px 230px, 250px 220px, 24px 24px' },
-  { id:'bamboo-shadow', name:'灰竹叶影', css:'radial-gradient(ellipse at 20% 16%, rgba(82,86,78,0.040) 0 1px, transparent 28px), radial-gradient(ellipse at 62% 42%, rgba(82,86,78,0.035) 0 1px, transparent 32px), radial-gradient(ellipse at 78% 76%, rgba(82,86,78,0.030) 0 1px, transparent 30px), repeating-linear-gradient(68deg, transparent 0 70px, rgba(84,90,82,0.035) 70px 72px, transparent 72px 132px), repeating-linear-gradient(112deg, transparent 0 82px, rgba(84,90,82,0.025) 82px 84px, transparent 84px 150px), #F8F7F3', cssBgSize:'240px 220px, 270px 240px, 300px 260px, 260px 260px, 320px 320px' }
+  { id:'warm-speckle', name:'米色细点', css:'radial-gradient(circle, rgba(115,96,74,0.035) 0 0.55px, transparent 0.9px), radial-gradient(circle, rgba(185,152,118,0.028) 0 0.65px, transparent 1px), linear-gradient(135deg, rgba(255,255,255,0.72), rgba(255,246,239,0.18)), #FFF9F5', cssBgSize:'30px 30px, 48px 48px, auto' }
 ];
 
 // ===================================================================
@@ -3657,12 +3652,14 @@ function buildWechatHTMLFromElement(source, includeBg) {
   const clone = source.cloneNode(true);
   inlineAllStyles(clone);
   prepareWechatCompatibility(clone);
+  normalizeWechatSpacingParity(clone);
   clone.innerHTML = sanitizeContentHTML(clone.innerHTML);
   if (!includeBg) return clone.innerHTML;
   const bg = BG_TEXTURES.find(b => b.id === STATE.bg) || BG_TEXTURES[0];
   let bgStyle = `background:${bg.css};`;
   if (bg.cssBgSize) bgStyle += `background-size:${bg.cssBgSize};`;
-  return `<section style="${bgStyle}padding:32px 24px;">${clone.innerHTML}</section>`;
+  const baseLine = getLineHeightPx(15, STATE.lineHeight);
+  return `<section style="${bgStyle}padding:32px 24px;font-size:15px;line-height:${baseLine}px;">${clone.innerHTML}</section>`;
 }
 function setButtonCopied(btn, copiedText, originalText, ms = 2000) {
   if (!btn) return;
@@ -3770,6 +3767,56 @@ function inlineAllStyles(container) {
   container.querySelectorAll('script,style,link,iframe,object,embed,form,input,button,textarea,select').forEach(el => el.remove());
 }
 
+function parseCssNumber(value) {
+  const n = parseFloat(String(value || '').trim());
+  return Number.isFinite(n) ? n : null;
+}
+
+function getElementFontPx(el, fallback = 15) {
+  const inline = parseCssNumber(el.style.fontSize);
+  if (inline) return inline;
+  const parent = el.parentElement ? getElementFontPx(el.parentElement, fallback) : fallback;
+  return parent || fallback;
+}
+
+function getLineHeightPx(fontPx, lineHeightValue) {
+  const raw = String(lineHeightValue || '').trim();
+  const numeric = parseCssNumber(raw);
+  if (raw.endsWith('px') && numeric) return Math.round(numeric * 10) / 10;
+  if (numeric) return Math.round(fontPx * numeric * 10) / 10;
+  return Math.round(fontPx * STATE.lineHeight * 10) / 10;
+}
+
+function getMarginPx(fontPx, marginValue, fallbackEm) {
+  const raw = String(marginValue || '').trim();
+  const numeric = parseCssNumber(raw);
+  if (raw.endsWith('px') && numeric !== null) return Math.round(numeric * 10) / 10;
+  if (raw.endsWith('em') && numeric !== null) return Math.round(fontPx * numeric * 10) / 10;
+  return Math.round(fontPx * fallbackEm * 10) / 10;
+}
+
+function normalizeWechatSpacingParity(container) {
+  container.querySelectorAll('p,li,blockquote').forEach(el => {
+    const fontPx = getElementFontPx(el, 15);
+    const linePx = getLineHeightPx(fontPx, el.style.lineHeight || STATE.lineHeight);
+    el.style.lineHeight = `${linePx}px`;
+    if (el.tagName === 'P') {
+      const mb = getMarginPx(fontPx, el.style.marginBottom, STATE.paraSpacing);
+      el.style.marginTop = '0';
+      el.style.marginBottom = `${mb}px`;
+    }
+    if (el.tagName === 'LI') {
+      el.style.marginTop = el.style.marginTop || '0';
+      el.style.marginBottom = el.style.marginBottom || `${Math.round(fontPx * 0.4 * 10) / 10}px`;
+    }
+  });
+
+  container.querySelectorAll('[data-theme-component="tip-card"] [data-theme-role="body"], [data-theme-component="tip-card"] [data-theme-role="body"] *').forEach(el => {
+    const fontPx = getElementFontPx(el, 15);
+    el.style.lineHeight = `${getLineHeightPx(fontPx, el.style.lineHeight || 1.8)}px`;
+  });
+}
+
 // ===================================================================
 // EXPORT HTML
 // ===================================================================
@@ -3777,11 +3824,13 @@ function exportHTML() {
   const clone = preview.cloneNode(true);
   inlineAllStyles(clone);
   prepareWechatCompatibility(clone);
+  normalizeWechatSpacingParity(clone);
   clone.innerHTML = sanitizeContentHTML(clone.innerHTML);
+  const bodyLine = getLineHeightPx(15, STATE.lineHeight);
   const html = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>公众号文章</title></head>
-<body style="max-width:650px;margin:40px auto;padding:0 20px;font-family:${BODY_FONTS[STATE.bodyFont].stack};line-height:${STATE.lineHeight};color:${getColors().text}">
+<body style="max-width:650px;margin:40px auto;padding:0 20px;font-family:${BODY_FONTS[STATE.bodyFont].stack};font-size:15px;line-height:${bodyLine}px;color:${getColors().text}">
 ${clone.innerHTML}
 </body></html>`;
   const blob = new Blob([html], {type:'text/html'});
