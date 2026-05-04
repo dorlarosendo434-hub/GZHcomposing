@@ -1083,7 +1083,7 @@ function normalizeWechatInlineLayouts(root) {
     }
 
     if (h.dataset.businessPartAdded || mode.headingStyle === 'business-card') {
-      h.style.display = 'inline-block';
+      h.style.display = 'block';
       h.style.width = 'fit-content';
       h.style.maxWidth = '100%';
       h.style.boxSizing = 'border-box';
@@ -1092,10 +1092,12 @@ function normalizeWechatInlineLayouts(root) {
       h.style.border = 'none';
       h.style.borderLeft = 'none';
       h.style.borderBottom = 'none';
-      h.style.borderRadius = '10px';
-      h.style.padding = '22px 24px 12px';
-      h.style.marginTop = '28px';
-      h.style.marginBottom = '18px';
+      h.style.borderRadius = '9px';
+      h.style.padding = h.tagName === 'H1' ? '20px 24px 12px' : '18px 20px 10px';
+      h.style.marginTop = '24px';
+      h.style.marginRight = 'auto';
+      h.style.marginBottom = '16px';
+      h.style.marginLeft = 'auto';
       h.style.textAlign = 'center';
       h.style.boxShadow = 'none';
       h.style.position = 'static';
@@ -1103,12 +1105,12 @@ function normalizeWechatInlineLayouts(root) {
       if (spans[0]) {
         spans[0].style.display = 'block';
         spans[0].style.width = 'fit-content';
-        spans[0].style.margin = '-34px auto 8px';
-        spans[0].style.padding = '4px 18px';
+        spans[0].style.margin = h.tagName === 'H1' ? '-30px auto 7px' : '-27px auto 7px';
+        spans[0].style.padding = '3px 14px';
         spans[0].style.borderRadius = '999px';
         spans[0].style.background = '#F7DEC2';
         spans[0].style.color = '#A97852';
-        spans[0].style.fontSize = '13px';
+        spans[0].style.fontSize = '12px';
         spans[0].style.fontWeight = '800';
         spans[0].style.lineHeight = '1.3';
       }
@@ -3157,22 +3159,25 @@ function applyHeadingStyle(h, style, c, tag) {
       h.style.border = 'none';
       h.style.borderLeft = 'none';
       h.style.borderBottom = 'none';
-      h.style.borderRadius = '10px';
-      h.style.padding = tag === 'H1' ? '24px 28px 14px' : '22px 24px 12px';
-      h.style.marginTop = '28px';
-      h.style.marginBottom = '18px';
-      h.style.display = 'inline-block';
+      h.style.borderRadius = '9px';
+      h.style.padding = tag === 'H1' ? '20px 24px 12px' : '18px 20px 10px';
+      h.style.marginTop = '24px';
+      h.style.marginRight = 'auto';
+      h.style.marginBottom = '16px';
+      h.style.marginLeft = 'auto';
+      h.style.display = 'block';
       h.style.width = 'fit-content';
       h.style.maxWidth = '100%';
       h.style.textAlign = 'center';
       h.style.letterSpacing = '0.02em';
       h.style.boxShadow = 'none';
       h.style.position = 'relative';
-      h.style.fontSize = tag === 'H1' ? '22px' : tag === 'H2' ? '19px' : '17px';
+      h.style.fontSize = tag === 'H1' ? '20px' : tag === 'H2' ? '17px' : '15px';
       if (!h.dataset.businessPartAdded) {
         const allHeadings = Array.from(h.parentElement.querySelectorAll('h1,h2,h3'));
         const num = allHeadings.indexOf(h) + 1;
-        h.innerHTML = `<span style="display:block;width:fit-content;margin:-34px auto 8px;padding:4px 18px;border-radius:999px;background:#F7DEC2;color:#A97852;font-size:13px;font-weight:800;line-height:1.3;">Part.${num}</span><span style="display:block;color:#FFFFFF;line-height:1.25;">${h.innerHTML}</span>`;
+        const partMargin = tag === 'H1' ? '-30px auto 7px' : '-27px auto 7px';
+        h.innerHTML = `<span style="display:block;width:fit-content;margin:${partMargin};padding:3px 14px;border-radius:999px;background:#F7DEC2;color:#A97852;font-size:12px;font-weight:800;line-height:1.3;">Part.${num}</span><span style="display:block;color:#FFFFFF;line-height:1.25;">${h.innerHTML}</span>`;
         h.dataset.businessPartAdded = '1';
       }
       break;
