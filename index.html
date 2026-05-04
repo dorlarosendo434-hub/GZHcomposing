@@ -156,6 +156,11 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 .hr-option:hover{background:var(--brand-soft)}
 .hr-preview{display:flex;align-items:center;gap:6px;margin-top:4px;color:var(--text3)}
 .hr-preview span{display:inline-block}
+.align-panel{position:absolute;top:100%;left:0;background:var(--white);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 16px rgba(0,0,0,.12);width:132px;padding:6px;z-index:245;display:none}
+.align-panel.show{display:block}
+.align-option{width:100%;height:30px;display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:4px;color:var(--brand);font-size:12px;text-align:left}
+.align-option:hover,.align-option.active{background:var(--brand-soft)}
+.align-option .icon{width:18px;text-align:center;font-size:14px}
 
 /* ===== Help Modal ===== */
 .help-content{font-size:13px;line-height:1.8;color:var(--text2)}
@@ -211,9 +216,14 @@ input,select,textarea{font-family:inherit;font-size:inherit}
       <span class="tb-sep"></span>
       <button class="tb-btn" id="btnQuote" title="引用" onclick="execCmd('formatBlock','BLOCKQUOTE')">❝</button>
       <button class="tb-btn" title="代码块" onclick="insertCodeBlock()">⟨/⟩</button>
-      <button class="tb-btn" id="btnAlignLeft" title="左对齐" onclick="applyTextAlign('left')">↤</button>
-      <button class="tb-btn" id="btnAlignCenter" title="居中对齐" onclick="applyTextAlign('center')">↔</button>
-      <button class="tb-btn" id="btnAlignRight" title="右对齐" onclick="applyTextAlign('right')">↦</button>
+      <div style="position:relative">
+        <button class="tb-btn" id="btnAlign" title="文本对齐" onclick="toggleAlignPanel()">↔</button>
+        <div class="align-panel" id="alignPanel">
+          <button class="align-option" id="alignOptionLeft" onclick="chooseTextAlign('left')"><span class="icon">↤</span>左对齐</button>
+          <button class="align-option" id="alignOptionCenter" onclick="chooseTextAlign('center')"><span class="icon">↔</span>居中</button>
+          <button class="align-option" id="alignOptionRight" onclick="chooseTextAlign('right')"><span class="icon">↦</span>右对齐</button>
+        </div>
+      </div>
       <button class="tb-btn" id="btnUl" title="无序列表" onclick="execCmd('insertUnorderedList')">•≡</button>
       <button class="tb-btn" id="btnOl" title="有序列表" onclick="execCmd('insertOrderedList')">1.</button>
       <span class="tb-sep"></span>
@@ -615,6 +625,24 @@ function applyTextAlign(align) {
   updateToolbarStates();
 }
 
+function toggleAlignPanel() {
+  const sel = window.getSelection();
+  if (sel.rangeCount > 0 && editor.contains(sel.anchorNode)) {
+    savedEditorRange = sel.getRangeAt(0).cloneRange();
+  }
+  const p = $('alignPanel');
+  p.classList.toggle('show');
+  $('imgPanel')?.classList.remove('show');
+  $('hrPanel')?.classList.remove('show');
+  updateToolbarStates();
+}
+
+function chooseTextAlign(align) {
+  if (savedEditorRange) restoreEditorRange(savedEditorRange);
+  applyTextAlign(align);
+  $('alignPanel')?.classList.remove('show');
+}
+
 function getSelectionRangeInEditor() {
   const sel = window.getSelection();
   if (!sel || !sel.rangeCount) return null;
@@ -740,9 +768,12 @@ function updateToolbarStates() {
   setToolbarActive('btnQuote', isSelectionInBlockFormat('BLOCKQUOTE'));
   setToolbarActive('btnHighlight', isSelectionInEditorHighlight());
   const align = getCurrentUserAlign();
-  setToolbarActive('btnAlignLeft', align === 'left');
-  setToolbarActive('btnAlignCenter', align === 'center');
-  setToolbarActive('btnAlignRight', align === 'right');
+  setToolbarActive('btnAlign', !!align);
+  setToolbarActive('alignOptionLeft', align === 'left');
+  setToolbarActive('alignOptionCenter', align === 'center');
+  setToolbarActive('alignOptionRight', align === 'right');
+  const alignIcon = { left: '↤', center: '↔', right: '↦' }[align] || '↔';
+  if ($('btnAlign')) $('btnAlign').textContent = alignIcon;
 }
 function insertCodeBlock() {
   const sel = window.getSelection();
@@ -1442,6 +1473,7 @@ function toggleImgPanel() {
   const p = $('imgPanel');
   p.classList.toggle('show');
   $('hrPanel')?.classList.remove('show');
+  $('alignPanel')?.classList.remove('show');
 }
 function toggleHrPanel() {
   const sel = window.getSelection();
@@ -1451,6 +1483,7 @@ function toggleHrPanel() {
   const p = $('hrPanel');
   p.classList.toggle('show');
   $('imgPanel')?.classList.remove('show');
+  $('alignPanel')?.classList.remove('show');
 }
 function insertDivider(style) {
   restoreEditorRange(savedEditorRange);
