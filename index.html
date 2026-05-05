@@ -1423,6 +1423,41 @@ function isWhiteCss(value) {
   return v === '#fff' || v === '#ffffff' || v === 'white' || v === 'rgb(255,255,255)' || v === 'rgba(255,255,255,1)';
 }
 
+function parseCssRgb(value) {
+  let v = String(value || '').trim().toLowerCase();
+  if (!v || v === 'transparent' || v === 'none') return null;
+  if (v === 'white') v = '#ffffff';
+  if (v === 'black') v = '#000000';
+  let m = v.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (m) {
+    let hex = m[1];
+    if (hex.length === 3) hex = hex.split('').map(ch => ch + ch).join('');
+    return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
+  }
+  m = v.match(/rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)/i);
+  if (m) return [Number(m[1]), Number(m[2]), Number(m[3])];
+  m = v.match(/#([0-9a-f]{6}|[0-9a-f]{3})/i) || v.match(/rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)/i);
+  if (m && m[0].startsWith('#')) return parseCssRgb(m[0]);
+  if (m) return [Number(m[1]), Number(m[2]), Number(m[3])];
+  return null;
+}
+
+function relativeLuminance(rgb) {
+  const vals = rgb.map(v => {
+    const n = Math.max(0, Math.min(255, v)) / 255;
+    return n <= 0.03928 ? n / 12.92 : Math.pow((n + 0.055) / 1.055, 2.4);
+  });
+  return vals[0] * 0.2126 + vals[1] * 0.7152 + vals[2] * 0.0722;
+}
+
+function contrastRatio(rgbA, rgbB) {
+  const a = relativeLuminance(rgbA);
+  const b = relativeLuminance(rgbB);
+  const hi = Math.max(a, b);
+  const lo = Math.min(a, b);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
 function hasOwnVisibleBackground(el) {
   if (!el?.style) return false;
   const bg = el.style.background || '';
@@ -1431,10 +1466,33 @@ function hasOwnVisibleBackground(el) {
   return !isTransparentCss(bg) || !isTransparentCss(bgColor) || !isTransparentCss(bgImage);
 }
 
+function nearestBackgroundRgb(el) {
+  let node = el;
+  while (node && node.nodeType === Node.ELEMENT_NODE) {
+    const rgb = parseCssRgb(node.style.backgroundColor) || parseCssRgb(node.style.background) || parseCssRgb(node.style.backgroundImage);
+    if (rgb) return rgb;
+    node = node.parentElement;
+  }
+  return null;
+}
+
+function hasReadableColorOnBackground(el) {
+  const fg = parseCssRgb(el?.style?.color);
+  const bg = nearestBackgroundRgb(el);
+  if (!fg || !bg) return false;
+  return contrastRatio(fg, bg) >= 3.4;
+}
+
+function hasDarkReadableBackgroundForWhite(el) {
+  const bg = nearestBackgroundRgb(el);
+  if (!bg) return false;
+  return contrastRatio([255, 255, 255], bg) >= 3.4;
+}
+
 function hasColoredReadableBackground(el) {
   let node = el;
   while (node && node.nodeType === Node.ELEMENT_NODE) {
-    if (hasOwnVisibleBackground(node) && !isWhiteCss(node.style.background) && !isWhiteCss(node.style.backgroundColor)) return true;
+    if (hasOwnVisibleBackground(node) && !isWhiteCss(node.style.background) && !isWhiteCss(node.style.backgroundColor)) return hasReadableColorOnBackground(el);
     node = node.parentElement;
   }
   return false;
@@ -1447,33 +1505,36 @@ function normalizeWechatColorModeCompatibility(root) {
   if (!root.style.background && !root.style.backgroundColor) root.style.backgroundColor = '#FFFFFF';
 
   root.querySelectorAll('p,li,blockquote,pre,code,[data-theme-role="body"],[data-theme-role="meta"]').forEach(el => {
-    if (isWhiteCss(el.style.color) && hasColoredReadableBackground(el)) return;
+    if (isWhiteCss(el.style.color) && hasDarkReadableBackgroundForWhite(el)) return;
+    if (!isWhiteCss(el.style.color) && hasReadableColorOnBackground(el)) return;
     el.style.color = el.dataset.themeRole === 'meta' ? safe.muted : safe.text;
   });
 
   root.querySelectorAll('strong,b').forEach(el => {
-    if (isWhiteCss(el.style.color) && hasColoredReadableBackground(el)) return;
+    if (isWhiteCss(el.style.color) && hasDarkReadableBackgroundForWhite(el)) return;
     el.style.color = safe.emphasis;
     el.style.fontWeight = '700';
   });
 
   root.querySelectorAll('em,i').forEach(el => {
-    if (isWhiteCss(el.style.color) && hasColoredReadableBackground(el)) return;
+    if (isWhiteCss(el.style.color) && hasDarkReadableBackgroundForWhite(el)) return;
     el.style.color = safe.emphasis;
   });
 
   root.querySelectorAll('h1,h2,h3,[data-theme-role="title"]').forEach(el => {
-    const preserveWhiteOnColor = isWhiteCss(el.style.color) && hasColoredReadableBackground(el);
+    const preserveWhiteOnColor = isWhiteCss(el.style.color) && hasDarkReadableBackgroundForWhite(el);
     if (!preserveWhiteOnColor) el.style.color = safe.heading;
   });
 
   root.querySelectorAll('span').forEach(el => {
     if (!el.textContent.trim()) return;
-    if (isWhiteCss(el.style.color) && hasColoredReadableBackground(el)) return;
+    if (isWhiteCss(el.style.color) && hasDarkReadableBackgroundForWhite(el)) return;
+    if (!isWhiteCss(el.style.color) && hasReadableColorOnBackground(el)) return;
     const role = el.getAttribute('data-theme-role') || '';
-    if (['number','divider','dots','chip-main','badge'].includes(role)) return;
-    if (el.closest('h1,h2,h3') && hasColoredReadableBackground(el)) return;
+    if (['divider','dots'].includes(role)) return;
+    if (el.closest('h1,h2,h3') && hasReadableColorOnBackground(el)) return;
     if (el.style.color && !isWhiteCss(el.style.color)) el.style.color = safe.emphasis;
+    if (isWhiteCss(el.style.color) && !hasDarkReadableBackgroundForWhite(el)) el.style.color = safe.emphasis;
   });
 
   root.querySelectorAll('hr,[data-theme-role="divider"]').forEach(el => {
