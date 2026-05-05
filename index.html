@@ -1403,12 +1403,92 @@ function normalizeWechatTipCards(root) {
     }
   });
 }
+
+const WECHAT_MODE_SAFE = {
+  text: '#767676',
+  muted: '#888888',
+  emphasis: '#5F7899',
+  heading: '#5A7290',
+  border: '#8A8A8A',
+  light: '#FFFFFF'
+};
+
+function isTransparentCss(value) {
+  const v = String(value || '').trim().toLowerCase();
+  return !v || v === 'transparent' || v === 'none' || v === 'rgba(0, 0, 0, 0)' || v === 'rgba(0,0,0,0)';
+}
+
+function isWhiteCss(value) {
+  const v = String(value || '').trim().toLowerCase().replace(/\s+/g, '');
+  return v === '#fff' || v === '#ffffff' || v === 'white' || v === 'rgb(255,255,255)' || v === 'rgba(255,255,255,1)';
+}
+
+function hasOwnVisibleBackground(el) {
+  if (!el?.style) return false;
+  const bg = el.style.background || '';
+  const bgColor = el.style.backgroundColor || '';
+  const bgImage = el.style.backgroundImage || '';
+  return !isTransparentCss(bg) || !isTransparentCss(bgColor) || !isTransparentCss(bgImage);
+}
+
+function hasColoredReadableBackground(el) {
+  let node = el;
+  while (node && node.nodeType === Node.ELEMENT_NODE) {
+    if (hasOwnVisibleBackground(node) && !isWhiteCss(node.style.background) && !isWhiteCss(node.style.backgroundColor)) return true;
+    node = node.parentElement;
+  }
+  return false;
+}
+
+function normalizeWechatColorModeCompatibility(root) {
+  const safe = WECHAT_MODE_SAFE;
+
+  root.style.color = safe.text;
+  if (!root.style.background && !root.style.backgroundColor) root.style.backgroundColor = '#FFFFFF';
+
+  root.querySelectorAll('p,li,blockquote,pre,code,[data-theme-role="body"],[data-theme-role="meta"]').forEach(el => {
+    if (isWhiteCss(el.style.color) && hasColoredReadableBackground(el)) return;
+    el.style.color = el.dataset.themeRole === 'meta' ? safe.muted : safe.text;
+  });
+
+  root.querySelectorAll('strong,b').forEach(el => {
+    if (isWhiteCss(el.style.color) && hasColoredReadableBackground(el)) return;
+    el.style.color = safe.emphasis;
+    el.style.fontWeight = '700';
+  });
+
+  root.querySelectorAll('em,i').forEach(el => {
+    if (isWhiteCss(el.style.color) && hasColoredReadableBackground(el)) return;
+    el.style.color = safe.emphasis;
+  });
+
+  root.querySelectorAll('h1,h2,h3,[data-theme-role="title"]').forEach(el => {
+    const preserveWhiteOnColor = isWhiteCss(el.style.color) && hasColoredReadableBackground(el);
+    if (!preserveWhiteOnColor) el.style.color = safe.heading;
+  });
+
+  root.querySelectorAll('span').forEach(el => {
+    if (!el.textContent.trim()) return;
+    if (isWhiteCss(el.style.color) && hasColoredReadableBackground(el)) return;
+    const role = el.getAttribute('data-theme-role') || '';
+    if (['number','divider','dots','chip-main','badge'].includes(role)) return;
+    if (el.closest('h1,h2,h3') && hasColoredReadableBackground(el)) return;
+    if (el.style.color && !isWhiteCss(el.style.color)) el.style.color = safe.emphasis;
+  });
+
+  root.querySelectorAll('hr,[data-theme-role="divider"]').forEach(el => {
+    if (el.style.background) el.style.background = safe.border;
+    if (el.style.borderColor) el.style.borderColor = safe.border;
+  });
+}
+
 function prepareWechatCompatibility(root) {
   normalizeImagePairs(root);
   normalizeWechatLists(root);
   normalizeWechatInlineLayouts(root);
   normalizeWechatPositioning(root);
   normalizeWechatTipCards(root);
+  normalizeWechatColorModeCompatibility(root);
 }
 function sanitizeContentHTML(html) {
   const tpl = document.createElement('template');
@@ -3938,7 +4018,7 @@ function buildWechatHTMLFromElement(source, includeBg) {
   let bgStyle = `background:${bg.css};`;
   if (bg.cssBgSize) bgStyle += `background-size:${bg.cssBgSize};`;
   const baseLine = getLineHeightPx(15, STATE.lineHeight);
-  return `<section style="${bgStyle}padding:32px 24px;font-size:15px;line-height:${baseLine}px;">${clone.innerHTML}</section>`;
+  return `<section style="${bgStyle}padding:32px 24px;font-size:15px;line-height:${baseLine}px;color:${WECHAT_MODE_SAFE.text};background-color:#FFFFFF;">${clone.innerHTML}</section>`;
 }
 function setButtonCopied(btn, copiedText, originalText, ms = 2000) {
   if (!btn) return;
@@ -4109,7 +4189,7 @@ function exportHTML() {
   const html = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>公众号文章</title></head>
-<body style="max-width:650px;margin:40px auto;padding:0 20px;font-family:${BODY_FONTS[STATE.bodyFont].stack};font-size:15px;line-height:${bodyLine}px;color:${getColors().text}">
+<body style="max-width:650px;margin:40px auto;padding:0 20px;font-family:${BODY_FONTS[STATE.bodyFont].stack};font-size:15px;line-height:${bodyLine}px;color:${WECHAT_MODE_SAFE.text};background:#FFFFFF">
 ${clone.innerHTML}
 </body></html>`;
   const blob = new Blob([html], {type:'text/html'});
