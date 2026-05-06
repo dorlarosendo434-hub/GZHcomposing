@@ -857,7 +857,7 @@ const SAFE_STYLE_PROPS = new Set([
   'width','height','max-width','min-width','max-height','margin','margin-top','margin-right','margin-bottom','margin-left',
   'padding','padding-top','padding-right','padding-bottom','padding-left','text-align','font-size','font-weight',
   'font-style','font-family','line-height','letter-spacing','text-indent','text-decoration','opacity','position','left','right','top','bottom',
-  'vertical-align','overflow','overflow-wrap','word-wrap','text-transform'
+  'vertical-align','overflow','overflow-x','overflow-y','overflow-wrap','word-wrap','white-space','white-space-collapse','text-wrap-mode','text-transform'
 ]);
 function isSafeCssValue(value) {
   return !/url\s*\(|expression\s*\(|behavior\s*:|binding\s*:|javascript:|vbscript:|data:|[<>]/i.test(String(value || ''));
@@ -1404,6 +1404,73 @@ function normalizeWechatTipCards(root) {
   });
 }
 
+function ensureTerminalCodeBar(pre) {
+  if (!pre || pre.querySelector('[data-theme-role="code-window-bar"]')) return;
+  const bar = document.createElement('section');
+  bar.setAttribute('data-theme-role', 'code-window-bar');
+  bar.style.display = 'block';
+  bar.style.height = '12px';
+  bar.style.lineHeight = '12px';
+  bar.style.margin = '0 0 18px';
+  bar.style.whiteSpace = 'nowrap';
+  ['#FF6B5F', '#F6BE4F', '#59D36A'].forEach(color => {
+    const dot = document.createElement('span');
+    dot.style.display = 'inline-block';
+    dot.style.width = '12px';
+    dot.style.height = '12px';
+    dot.style.marginRight = '8px';
+    dot.style.borderRadius = '50%';
+    dot.style.background = color;
+    dot.style.verticalAlign = 'top';
+    bar.appendChild(dot);
+  });
+  pre.insertBefore(bar, pre.firstChild);
+}
+
+function normalizeWechatCodeBlocks(root) {
+  root.querySelectorAll('pre').forEach(pre => {
+    ensureTerminalCodeBar(pre);
+    pre.style.display = 'block';
+    pre.style.width = '100%';
+    pre.style.maxWidth = '100%';
+    pre.style.boxSizing = 'border-box';
+    pre.style.background = '#252A33';
+    pre.style.border = 'none';
+    pre.style.borderRadius = '8px';
+    pre.style.boxShadow = '0 10px 24px rgba(15,23,42,0.26)';
+    pre.style.padding = '18px 20px 10px';
+    pre.style.margin = '1.4em auto';
+    pre.style.overflowX = 'auto';
+    pre.style.overflowY = 'hidden';
+    pre.style.overflow = 'auto';
+    pre.style.whiteSpace = 'pre';
+    pre.style.wordWrap = 'normal';
+    pre.style.overflowWrap = 'normal';
+    pre.style.fontSize = '13px';
+    pre.style.lineHeight = '1.8';
+    pre.style.fontFamily = '"SF Mono","Consolas","Menlo",monospace';
+    pre.style.color = '#D7E7FF';
+
+    pre.querySelectorAll('code').forEach(code => {
+      code.style.display = 'block';
+      code.style.minWidth = 'max-content';
+      code.style.width = 'max-content';
+      code.style.maxWidth = 'none';
+      code.style.background = 'transparent';
+      code.style.padding = '0';
+      code.style.margin = '0';
+      code.style.border = 'none';
+      code.style.whiteSpace = 'pre';
+      code.style.wordWrap = 'normal';
+      code.style.overflowWrap = 'normal';
+      code.style.fontSize = '13px';
+      code.style.lineHeight = '1.8';
+      code.style.fontFamily = '"SF Mono","Consolas","Menlo",monospace';
+      code.style.color = '#D7E7FF';
+    });
+  });
+}
+
 const WECHAT_MODE_SAFE = {
   text: '#767676',
   muted: '#888888',
@@ -1549,6 +1616,7 @@ function prepareWechatCompatibility(root) {
   normalizeWechatInlineLayouts(root);
   normalizeWechatPositioning(root);
   normalizeWechatTipCards(root);
+  normalizeWechatCodeBlocks(root);
   normalizeWechatColorModeCompatibility(root);
 }
 function sanitizeContentHTML(html) {
@@ -3081,16 +3149,44 @@ function applyPreviewStyles() {
 
   // Code blocks
   preview.querySelectorAll('pre').forEach(pre => {
-    pre.style.background = c.sub || '#F6F8FA';
-    pre.style.borderRadius = '10px';
-    pre.style.padding = '18px 20px';
+    ensureTerminalCodeBar(pre);
+    pre.style.display = 'block';
+    pre.style.width = '100%';
+    pre.style.maxWidth = '100%';
+    pre.style.boxSizing = 'border-box';
+    pre.style.background = '#252A33';
+    pre.style.borderRadius = '8px';
+    pre.style.padding = '18px 20px 10px';
+    pre.style.overflowX = 'auto';
+    pre.style.overflowY = 'hidden';
     pre.style.overflow = 'auto';
+    pre.style.whiteSpace = 'pre';
+    pre.style.wordWrap = 'normal';
+    pre.style.overflowWrap = 'normal';
     pre.style.fontSize = '13px';
-    pre.style.lineHeight = '1.7';
-    pre.style.margin = '1.2em 0';
-    pre.style.fontFamily = '"SF Mono","Fira Code","Consolas",monospace';
-    pre.style.color = c.text;
-    pre.style.border = '1px solid ' + c.main + '15';
+    pre.style.lineHeight = '1.8';
+    pre.style.margin = '1.4em auto';
+    pre.style.fontFamily = '"SF Mono","Consolas","Menlo",monospace';
+    pre.style.color = '#D7E7FF';
+    pre.style.border = 'none';
+    pre.style.boxShadow = '0 10px 24px rgba(15,23,42,0.26)';
+    pre.querySelectorAll('code').forEach(code => {
+      code.style.display = 'block';
+      code.style.minWidth = 'max-content';
+      code.style.width = 'max-content';
+      code.style.maxWidth = 'none';
+      code.style.background = 'transparent';
+      code.style.padding = '0';
+      code.style.margin = '0';
+      code.style.border = 'none';
+      code.style.whiteSpace = 'pre';
+      code.style.wordWrap = 'normal';
+      code.style.overflowWrap = 'normal';
+      code.style.fontSize = '13px';
+      code.style.lineHeight = '1.8';
+      code.style.fontFamily = '"SF Mono","Consolas","Menlo",monospace';
+      code.style.color = '#D7E7FF';
+    });
   });
   preview.querySelectorAll('code').forEach(code => {
     if (code.parentElement.tagName !== 'PRE') {
@@ -4068,12 +4164,25 @@ function toggleMobile() {
 function buildWechatHTMLSnippet() {
   return buildWechatHTMLFromElement(preview, true);
 }
+function appendRawStyle(el, styleText) {
+  const current = (el.getAttribute('style') || '').trim();
+  el.setAttribute('style', current ? `${current};${styleText}` : styleText);
+}
+function restoreWechatCodeBlockNoWrap(root) {
+  root.querySelectorAll('pre').forEach(pre => {
+    appendRawStyle(pre, 'white-space:pre;word-wrap:normal;overflow-wrap:normal;overflow-x:auto;overflow-y:hidden');
+  });
+  root.querySelectorAll('pre code').forEach(code => {
+    appendRawStyle(code, 'display:block;white-space:pre;word-wrap:normal;overflow-wrap:normal;min-width:max-content;width:max-content;max-width:none');
+  });
+}
 function buildWechatHTMLFromElement(source, includeBg) {
   const clone = source.cloneNode(true);
   inlineAllStyles(clone);
   prepareWechatCompatibility(clone);
   normalizeWechatSpacingParity(clone);
   clone.innerHTML = sanitizeContentHTML(clone.innerHTML);
+  restoreWechatCodeBlockNoWrap(clone);
   if (!includeBg) return clone.innerHTML;
   const bg = BG_TEXTURES.find(b => b.id === STATE.bg) || BG_TEXTURES[0];
   let bgStyle = `background:${bg.css};`;
@@ -4246,6 +4355,7 @@ function exportHTML() {
   prepareWechatCompatibility(clone);
   normalizeWechatSpacingParity(clone);
   clone.innerHTML = sanitizeContentHTML(clone.innerHTML);
+  restoreWechatCodeBlockNoWrap(clone);
   const bodyLine = getLineHeightPx(15, STATE.lineHeight);
   const html = `<!DOCTYPE html>
 <html lang="zh-CN">
