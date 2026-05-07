@@ -54,7 +54,10 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 .editor{flex:1;padding:24px 28px;overflow-y:auto;outline:none;font-size:15px;line-height:1.8;color:var(--text);background:var(--white)}
 .editor:empty::before{content:attr(data-placeholder);color:#CCC;pointer-events:none}
 .editor img{max-width:100%;height:auto;border-radius:12px;margin:8px 0;display:block}
-.editor-footer{display:flex;align-items:center;justify-content:space-between;padding:6px 16px;background:var(--white);border-top:1px solid var(--border);font-size:12px;color:var(--text3);flex-shrink:0}
+.editor-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 16px;background:var(--white);border-top:1px solid var(--border);font-size:12px;color:var(--text3);flex-shrink:0}
+.editor-footer-left{display:flex;align-items:center;gap:10px;min-width:0}
+.clear-editor-btn{height:26px;padding:0 10px;border:1px solid rgba(107,35,3,.18);border-radius:4px;background:#FFF7F2;color:var(--brand);font-size:12px;font-weight:600;white-space:nowrap;transition:all .15s}
+.clear-editor-btn:hover{background:var(--brand-soft);border-color:rgba(107,35,3,.28)}
 
 /* ===== Preview Area ===== */
 .preview-toolbar{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--white);border-bottom:1px solid var(--border);flex-shrink:0}
@@ -302,7 +305,10 @@ input,select,textarea{font-family:inherit;font-size:inherit}
       <div class="editor" id="editor" contenteditable="true" data-placeholder="开始输入内容，或粘贴Markdown文本...&#10;&#10;支持 Markdown 语法：&#10;# 标题  ** 加粗 **  * 斜体 *  > 引用  - 列表  ``` 代码块  --- 分割线" spellcheck="false"></div>
     </div>
     <div class="editor-footer">
-      <span id="editorCount">字数：0</span>
+      <div class="editor-footer-left">
+        <span id="editorCount">字数：0</span>
+        <button class="clear-editor-btn" type="button" onclick="clearEditorContent()">一键清空</button>
+      </div>
       <span style="font-size:11px;color:#CCC">支持 Markdown 语法</span>
     </div>
   </div>
@@ -2956,6 +2962,14 @@ function setupEditorEvents() {
   document.addEventListener('selectionchange', () => {
     if (getSelectionRangeInEditor()) updateToolbarStates();
   });
+}
+
+function clearEditorContent() {
+  editor.innerHTML = '';
+  savedEditorRange = null;
+  updatePreview();
+  updateToolbarStates();
+  editor.focus();
 }
 
 function setupRichCopyEvents() {
