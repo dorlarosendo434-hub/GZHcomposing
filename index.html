@@ -571,6 +571,7 @@ window.addEventListener('DOMContentLoaded', () => {
   setupScrollSync();
   setupEditorEvents();
   setupRichCopyEvents();
+  setupDesignMediaUploadEvents();
   updateToolbarStates();
 });
 
@@ -1416,6 +1417,7 @@ function normalizeDesignMedia(root) {
     box.style.overflow = 'hidden';
     box.style.borderRadius = box.style.borderRadius || '18px';
     box.style.textAlign = 'center';
+    box.style.cursor = 'pointer';
     const imgs = box.querySelectorAll('img');
     if (imgs.length) box.querySelectorAll('[data-theme-role="media-placeholder"]').forEach(tip => tip.remove());
     imgs.forEach(img => {
@@ -1720,6 +1722,61 @@ function readImageFiles(files) {
     reader.onerror = () => resolve({ file, src: '' });
     reader.readAsDataURL(file);
   })));
+}
+
+function getDesignMediaIndex(container, media) {
+  const medias = Array.from(container.querySelectorAll('[data-theme-component="design-intro"] [data-theme-role="media"]'));
+  return medias.indexOf(media);
+}
+
+function applyDesignMediaImage(index, src) {
+  const media = editor.querySelectorAll('[data-theme-component="design-intro"] [data-theme-role="media"]')[index];
+  if (!media || !src) return false;
+  media.innerHTML = `<img src="${escapeAttr(src)}" alt="image" style="display:block;width:100%;height:100%;max-width:100%;margin:0;border:none;border-radius:${escapeAttr(media.style.borderRadius || '18px')};object-fit:cover;object-position:center center;">`;
+  media.style.cursor = 'pointer';
+  media.style.overflow = 'hidden';
+  editor.focus();
+  scheduleUpdate();
+  return true;
+}
+
+function openDesignMediaPicker(index) {
+  if (index < 0) return;
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/png,image/jpeg,image/gif,image/webp';
+  input.style.display = 'none';
+  input.addEventListener('change', () => {
+    const files = getValidImageFiles(input.files, 1);
+    if (!files || !files.length) {
+      input.remove();
+      return;
+    }
+    readImageFiles(files).then(items => {
+      const src = items[0]?.src || '';
+      if (!src) {
+        alert('图片读取失败或格式不安全');
+        return;
+      }
+      applyDesignMediaImage(index, src);
+    }).finally(() => input.remove());
+  });
+  document.body.appendChild(input);
+  input.click();
+}
+
+function handleDesignMediaClick(e, container) {
+  const media = e.target.closest?.('[data-theme-component="design-intro"] [data-theme-role="media"]');
+  if (!media || !container.contains(media)) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const index = getDesignMediaIndex(container, media);
+  openDesignMediaPicker(index);
+}
+
+function setupDesignMediaUploadEvents() {
+  editor.addEventListener('click', e => handleDesignMediaClick(e, editor));
+  preview.addEventListener('click', e => handleDesignMediaClick(e, preview));
 }
 function restoreEditorRange(range) {
   editor.focus();
@@ -2100,7 +2157,7 @@ function insertDesignIntro() {
           <p data-theme-role="highlight" style="font-size:24px;font-weight:900;color:${main};margin:0 0 14px;line-height:1.08;letter-spacing:0;">讲清一个流程</p>
           <p data-theme-role="body" style="font-size:13px;color:#9CA3AF;margin:0;line-height:1.7;letter-spacing:0.5px;">节点 · 关键词 · 结论</p>
         </section>
-        <section data-theme-role="media" style="width:128px;height:128px;border-radius:18px;background:linear-gradient(135deg,${alphaColor(main,0.14,sub)},${alphaColor(accent,0.12,'#fff')});display:flex;align-items:center;justify-content:center;text-align:center;flex-shrink:0;overflow:hidden;box-sizing:border-box;">
+        <section data-theme-role="media" title="点击插入图片" style="width:128px;height:128px;border-radius:18px;background:linear-gradient(135deg,${alphaColor(main,0.14,sub)},${alphaColor(accent,0.12,'#fff')});display:flex;align-items:center;justify-content:center;text-align:center;flex-shrink:0;overflow:hidden;box-sizing:border-box;cursor:pointer;">
           <span data-theme-role="media-placeholder" style="font-size:13px;font-weight:900;color:${main};line-height:1.5;">点击此处<br>插入图片</span>
         </section>
       </section>
