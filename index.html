@@ -857,7 +857,8 @@ const SAFE_STYLE_PROPS = new Set([
   'width','height','max-width','min-width','max-height','margin','margin-top','margin-right','margin-bottom','margin-left',
   'padding','padding-top','padding-right','padding-bottom','padding-left','text-align','font-size','font-weight',
   'font-style','font-family','line-height','letter-spacing','text-indent','text-decoration','opacity','position','left','right','top','bottom',
-  'vertical-align','overflow','overflow-x','overflow-y','overflow-wrap','word-wrap','white-space','white-space-collapse','text-wrap-mode','text-transform'
+  'vertical-align','overflow','overflow-x','overflow-y','overflow-wrap','word-wrap','white-space','white-space-collapse','text-wrap-mode','text-transform',
+  'object-fit','object-position'
 ]);
 function isSafeCssValue(value) {
   return !/url\s*\(|expression\s*\(|behavior\s*:|binding\s*:|javascript:|vbscript:|data:|[<>]/i.test(String(value || ''));
@@ -1404,6 +1405,67 @@ function normalizeWechatTipCards(root) {
   });
 }
 
+function normalizeDesignMedia(root) {
+  root.querySelectorAll('[data-theme-component="design-intro"] [data-theme-role="media"], [data-theme-component="design-intro"] [data-theme-role="badge"]').forEach(box => {
+    box.style.display = 'block';
+    box.style.width = box.style.width || '128px';
+    box.style.height = box.style.height || '128px';
+    box.style.minWidth = box.style.minWidth || box.style.width;
+    box.style.maxWidth = '100%';
+    box.style.boxSizing = 'border-box';
+    box.style.overflow = 'hidden';
+    box.style.borderRadius = box.style.borderRadius || '18px';
+    box.style.textAlign = 'center';
+    const imgs = box.querySelectorAll('img');
+    if (imgs.length) box.querySelectorAll('[data-theme-role="media-placeholder"]').forEach(tip => tip.remove());
+    imgs.forEach(img => {
+      img.style.display = 'block';
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.maxWidth = '100%';
+      img.style.margin = '0';
+      img.style.border = 'none';
+      img.style.borderRadius = box.style.borderRadius || '18px';
+      img.style.objectFit = 'cover';
+      img.style.objectPosition = img.style.objectPosition || 'center center';
+    });
+  });
+}
+
+function normalizeWechatEndingLayouts(root) {
+  const normalizeHorizontalRow = row => {
+    if (!row) return;
+    row.style.display = 'block';
+    row.style.textAlign = 'center';
+    row.style.whiteSpace = 'nowrap';
+    row.style.marginLeft = 'auto';
+    row.style.marginRight = 'auto';
+    row.querySelectorAll('[data-theme-role^="icon-"],[data-theme-role="action-item"],[data-theme-role="share"],span,div').forEach(item => {
+      if (item === row) return;
+      item.style.display = 'inline-block';
+      item.style.verticalAlign = 'middle';
+      item.style.marginLeft = item.style.marginLeft || '8px';
+      item.style.marginRight = item.style.marginRight || '8px';
+      if (item.style.height && !item.style.lineHeight) item.style.lineHeight = item.style.height;
+    });
+  };
+
+  root.querySelectorAll('[data-ending-block]').forEach(block => {
+    block.style.display = 'block';
+    block.style.width = '100%';
+    block.style.maxWidth = '100%';
+    block.style.boxSizing = 'border-box';
+    block.querySelectorAll('[data-theme-role="icon-row"],[data-theme-role="action-row"]').forEach(normalizeHorizontalRow);
+    const legacyIcon = block.querySelector('[data-theme-role="icon-main"],[data-theme-role="icon-sub"],[data-theme-role="icon-accent"]');
+    if (legacyIcon) normalizeHorizontalRow(legacyIcon.parentElement);
+  });
+
+  root.querySelectorAll('[data-theme-component="design-ending"] [data-theme-role="action-row"]').forEach(row => {
+    normalizeHorizontalRow(row);
+  });
+  root.querySelectorAll('[data-theme-component="design-ending"] [data-theme-role="share"]').forEach(share => normalizeHorizontalRow(share.parentElement));
+}
+
 function ensureTerminalCodeBar(pre) {
   if (!pre || pre.querySelector('[data-theme-role="code-window-bar"]')) return;
   const bar = document.createElement('section');
@@ -1616,6 +1678,8 @@ function prepareWechatCompatibility(root) {
   normalizeWechatInlineLayouts(root);
   normalizeWechatPositioning(root);
   normalizeWechatTipCards(root);
+  normalizeDesignMedia(root);
+  normalizeWechatEndingLayouts(root);
   normalizeWechatCodeBlocks(root);
   normalizeWechatColorModeCompatibility(root);
 }
@@ -2036,8 +2100,8 @@ function insertDesignIntro() {
           <p data-theme-role="highlight" style="font-size:24px;font-weight:900;color:${main};margin:0 0 14px;line-height:1.08;letter-spacing:0;">讲清一个流程</p>
           <p data-theme-role="body" style="font-size:13px;color:#9CA3AF;margin:0;line-height:1.7;letter-spacing:0.5px;">节点 · 关键词 · 结论</p>
         </section>
-        <section data-theme-role="badge" style="width:108px;height:108px;border-radius:18px;background:linear-gradient(135deg,${alphaColor(main,0.14,sub)},${alphaColor(accent,0.12,'#fff')});display:flex;align-items:center;justify-content:center;text-align:center;flex-shrink:0;">
-          <span style="font-size:15px;font-weight:900;color:${main};line-height:1.4;">设计<br>排版</span>
+        <section data-theme-role="media" style="width:128px;height:128px;border-radius:18px;background:linear-gradient(135deg,${alphaColor(main,0.14,sub)},${alphaColor(accent,0.12,'#fff')});display:flex;align-items:center;justify-content:center;text-align:center;flex-shrink:0;overflow:hidden;box-sizing:border-box;">
+          <span data-theme-role="media-placeholder" style="font-size:13px;font-weight:900;color:${main};line-height:1.5;">点击此处<br>插入图片</span>
         </section>
       </section>
     </section>
@@ -2097,10 +2161,10 @@ function insertDesignEnding() {
     </section>
     <section data-theme-role="action" style="background:radial-gradient(circle at center,#F9FAFB 0%,#FFFFFF 100%);border:1px solid #E5E7EB;border-radius:16px;padding:30px 20px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.03);">
       <p style="font-size:13px;font-weight:800;color:${text};margin:0 0 20px;line-height:1.6;">既然看到这里了，如果觉得有用，随手点个赞、在看、转发三连吧。</p>
-      <section style="display:flex;justify-content:center;gap:24px;margin-bottom:16px;">
-        <span style="text-align:center;color:#4B5563;font-size:13px;">点赞</span>
-        <span style="text-align:center;color:#4B5563;font-size:13px;">在看</span>
-        <span data-theme-role="share" style="text-align:center;color:${main};font-size:13px;font-weight:800;">转发</span>
+      <section data-theme-role="action-row" style="display:block;text-align:center;white-space:nowrap;margin-bottom:16px;">
+        <span data-theme-role="action-item" style="display:inline-block;vertical-align:middle;text-align:center;color:#4B5563;font-size:13px;margin:0 12px;">点赞</span>
+        <span data-theme-role="action-item" style="display:inline-block;vertical-align:middle;text-align:center;color:#4B5563;font-size:13px;margin:0 12px;">在看</span>
+        <span data-theme-role="share" style="display:inline-block;vertical-align:middle;text-align:center;color:${main};font-size:13px;font-weight:800;margin:0 12px;">转发</span>
       </section>
       <p style="font-size:10px;color:#9CA3AF;letter-spacing:1px;margin:0;">THANKS FOR READING</p>
     </section>
@@ -2543,10 +2607,10 @@ function insertEnding(type) {
       html = `<div data-ending-type="1" style="background:${subColor};border-radius:16px;padding:32px;text-align:center;margin:2em 0">
         <div data-theme-role="title" style="font-size:18px;font-weight:700;color:${mainColor};margin-bottom:8px">既然看到这里了</div>
         <div data-theme-role="body" style="font-size:14px;color:${textColor};opacity:0.72;margin-bottom:24px">如果觉得有用，先点个赞再顺手点个在看或转发</div>
-        <div style="display:flex;justify-content:center;gap:24px;margin-bottom:24px">
-          <div data-theme-role="icon-main" style="width:48px;height:48px;border-radius:50%;background:${mainColor};display:flex;align-items:center;justify-content:center;font-size:20px">❤️</div>
-          <div data-theme-role="icon-sub" style="width:48px;height:48px;border-radius:50%;background:${alphaColor(mainColor, 0.12, '#eee')};display:flex;align-items:center;justify-content:center;font-size:20px">⭐</div>
-          <div data-theme-role="icon-accent" style="width:48px;height:48px;border-radius:50%;background:${alphaColor(accentColor, 0.16, '#eee')};display:flex;align-items:center;justify-content:center;font-size:20px">↗️</div>
+        <div data-theme-role="icon-row" style="display:block;text-align:center;white-space:nowrap;margin-bottom:24px">
+          <span data-theme-role="icon-main" style="display:inline-block;vertical-align:middle;width:48px;height:48px;line-height:48px;border-radius:50%;background:${mainColor};font-size:20px;margin:0 10px">❤️</span>
+          <span data-theme-role="icon-sub" style="display:inline-block;vertical-align:middle;width:48px;height:48px;line-height:48px;border-radius:50%;background:${alphaColor(mainColor, 0.12, '#eee')};font-size:20px;margin:0 10px">⭐</span>
+          <span data-theme-role="icon-accent" style="display:inline-block;vertical-align:middle;width:48px;height:48px;line-height:48px;border-radius:50%;background:${alphaColor(accentColor, 0.16, '#eee')};font-size:20px;margin:0 10px">↗️</span>
         </div>
         <div data-theme-role="meta" style="font-size:11px;color:${mainColor};opacity:0.42;letter-spacing:0.3em;text-transform:uppercase">THANKS FOR READING</div>
       </div>`;
@@ -2579,15 +2643,17 @@ function insertEnding(type) {
   if (existing) existing.remove();
   // Wrap in a container with marker attribute
   html = `<div data-ending-block="true" data-theme-component="ending" data-ending-type="${type}" style="margin-top:2em">${html}</div>`;
-  // Insert at end of editor
+  // Insert at end of editor with DOM parsing to avoid execCommand moving decorative nodes out of the ending block.
   editor.focus();
   const sel = window.getSelection();
+  const tpl = document.createElement('template');
+  tpl.innerHTML = sanitizeContentHTML(html);
+  editor.appendChild(tpl.content);
   const range = document.createRange();
   range.selectNodeContents(editor);
   range.collapse(false);
   sel.removeAllRanges();
   sel.addRange(range);
-  document.execCommand('insertHTML', false, html);
   hideModal();
   scheduleUpdate();
 }
@@ -3395,7 +3461,7 @@ function applyThemedComponents(c) {
     el.style.borderColor = alphaColor(main, 0.16, '#d1fae5');
     const meta = el.querySelector('[data-theme-role="meta"]');
     const highlight = el.querySelector('[data-theme-role="highlight"]');
-    const badge = el.querySelector('[data-theme-role="badge"]');
+    const badge = el.querySelector('[data-theme-role="badge"],[data-theme-role="media"]');
     const bar = el.querySelector('[data-theme-role="bar"]');
     const chipMain = el.querySelector('[data-theme-role="chip-main"]');
     const chips = el.querySelectorAll('[data-theme-role="chip"]');
@@ -3403,7 +3469,24 @@ function applyThemedComponents(c) {
     const body = el.querySelector('[data-theme-role="body"]');
     if (meta) meta.style.color = main;
     if (highlight) highlight.style.color = main;
-    if (badge) badge.style.background = `linear-gradient(135deg, ${alphaColor(main,0.14,sub)}, ${alphaColor(accent,0.12,'#fff')})`;
+    if (badge) {
+      badge.style.background = `linear-gradient(135deg, ${alphaColor(main,0.14,sub)}, ${alphaColor(accent,0.12,'#fff')})`;
+      badge.style.overflow = 'hidden';
+      badge.style.boxSizing = 'border-box';
+      const imgs = badge.querySelectorAll('img');
+      if (imgs.length) badge.querySelectorAll('[data-theme-role="media-placeholder"]').forEach(tip => tip.remove());
+      imgs.forEach(img => {
+        img.style.display = 'block';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.maxWidth = '100%';
+        img.style.margin = '0';
+        img.style.border = 'none';
+        img.style.borderRadius = badge.style.borderRadius || '18px';
+        img.style.objectFit = 'cover';
+        img.style.objectPosition = img.style.objectPosition || 'center center';
+      });
+    }
     if (bar) bar.style.background = grad;
     if (chipMain) {
       chipMain.style.background = main;
