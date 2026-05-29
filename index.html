@@ -58,6 +58,8 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 .editor-footer-left{display:flex;align-items:center;gap:10px;min-width:0}
 .clear-editor-btn{height:26px;padding:0 10px;border:1px solid rgba(107,35,3,.18);border-radius:4px;background:#FFF7F2;color:var(--brand);font-size:12px;font-weight:600;white-space:nowrap;transition:all .15s}
 .clear-editor-btn:hover{background:var(--brand-soft);border-color:rgba(107,35,3,.28)}
+.draft-editor-btn{height:26px;padding:0 10px;border:1px solid rgba(30,58,95,.2);border-radius:4px;background:#F5F9FF;color:#1E3A5F;font-size:12px;font-weight:600;white-space:nowrap;transition:all .15s}
+.draft-editor-btn:hover{background:#EAF2FF;border-color:rgba(30,58,95,.32)}
 
 /* ===== Preview Area ===== */
 .preview-toolbar{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--white);border-bottom:1px solid var(--border);flex-shrink:0}
@@ -308,6 +310,7 @@ input,select,textarea{font-family:inherit;font-size:inherit}
       <div class="editor-footer-left">
         <span id="editorCount">字数：0</span>
         <button class="clear-editor-btn" type="button" onclick="clearEditorContent()">一键清空</button>
+        <button class="draft-editor-btn" id="contentDraftBtn" type="button" onclick="openContentDraftPanel()">内容暂存</button>
       </div>
       <span style="font-size:11px;color:#CCC">支持 Markdown 语法</span>
     </div>
@@ -337,8 +340,6 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 <!-- ===== Bottom Bar ===== -->
 <div class="bottom-bar">
   <button class="btn-secondary" onclick="saveStylePrompt()">💾 保存为我的样式</button>
-  <button class="btn-secondary" onclick="exportStyleJSON()">📤 导出样式JSON</button>
-  <button class="btn-secondary" onclick="importStyleJSON()">📥 导入样式JSON</button>
   <span class="spacer"></span>
   <button class="btn-secondary" onclick="exportHTML()">导出HTML</button>
   <button class="btn-secondary" id="copyHtmlBtn" onclick="copyHTMLCode()">复制为HTML</button>
@@ -573,6 +574,7 @@ window.addEventListener('DOMContentLoaded', () => {
   editor.innerHTML = DEFAULT_HTML;
   applyMode(MODES.find(m => m.id === DEFAULT_MODE_ID) || MODES[0]);
   updatePreview();
+  updateContentDraftButton();
   setupDivider();
   setupScrollSync();
   setupEditorEvents();
@@ -2970,6 +2972,110 @@ function clearEditorContent() {
   updatePreview();
   updateToolbarStates();
   editor.focus();
+}
+
+const CONTENT_DRAFT_KEY = 'wx_formatter_content_draft';
+
+function getContentDraft() {
+  try {
+    const data = JSON.parse(localStorage.getItem(CONTENT_DRAFT_KEY) || 'null');
+    if (!data || typeof data !== 'object' || typeof data.html !== 'string') return null;
+    return {
+      html: data.html,
+      text: String(data.text || ''),
+      time: Number.isFinite(Number(data.time)) ? Number(data.time) : Date.now()
+    };
+  } catch {
+    return null;
+  }
+}
+
+function hasEditorContent() {
+  const text = (editor.innerText || '').replace(/\s/g, '');
+  return !!text || !!editor.querySelector('img,table,hr,blockquote,h1,h2,h3,pre,ul,ol,section,div[data-theme-component]');
+}
+
+function formatDraftTime(time) {
+  const d = new Date(time);
+  if (Number.isNaN(d.getTime())) return '未知时间';
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function updateContentDraftButton() {
+  const btn = $('contentDraftBtn');
+  if (!btn) return;
+  const draft = getContentDraft();
+  btn.textContent = draft ? '内容暂存*' : '内容暂存';
+  btn.title = draft ? `已有暂存：${formatDraftTime(draft.time)}` : '暂存当前编辑器内容';
+}
+
+function saveContentDraft() {
+  if (!hasEditorContent()) {
+    alert('当前编辑器没有可暂存的内容');
+    return;
+  }
+  const draft = {
+    version: 1,
+    html: sanitizeContentHTML(editor.innerHTML),
+    text: editor.innerText || '',
+    time: Date.now()
+  };
+  try {
+    localStorage.setItem(CONTENT_DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    alert('暂存失败：内容可能过大，浏览器本地存储空间不足');
+    return;
+  }
+  updateContentDraftButton();
+  hideModal();
+  alert('内容已暂存');
+}
+
+function restoreContentDraft() {
+  const draft = getContentDraft();
+  if (!draft) {
+    alert('暂无暂存内容');
+    updateContentDraftButton();
+    return;
+  }
+  if (hasEditorContent() && !confirm('恢复暂存会覆盖当前编辑器内容，确定恢复吗？')) return;
+  editor.innerHTML = sanitizeContentHTML(draft.html);
+  savedEditorRange = null;
+  hideModal();
+  updatePreview();
+  updateToolbarStates();
+  editor.focus();
+}
+
+function deleteContentDraft() {
+  if (!getContentDraft()) {
+    updateContentDraftButton();
+    return;
+  }
+  if (!confirm('确定删除当前暂存内容？')) return;
+  localStorage.removeItem(CONTENT_DRAFT_KEY);
+  updateContentDraftButton();
+  hideModal();
+}
+
+function openContentDraftPanel() {
+  const draft = getContentDraft();
+  if (!draft) {
+    saveContentDraft();
+    return;
+  }
+  const chars = draft.text.replace(/\s/g, '').length;
+  showModal(`
+    <h3>内容暂存</h3>
+    <p style="font-size:13px;color:#666;margin-bottom:12px">已有暂存：${escapeHtml(formatDraftTime(draft.time))}，约 ${chars} 字。</p>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="hideModal()">取消</button>
+      <button class="btn-secondary" onclick="deleteContentDraft()">删除暂存</button>
+      <button class="btn-secondary" onclick="saveContentDraft()">覆盖暂存</button>
+      <button class="btn-primary" onclick="restoreContentDraft()">恢复暂存</button>
+    </div>
+  `);
 }
 
 function setupRichCopyEvents() {
