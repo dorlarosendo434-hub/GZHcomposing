@@ -29,6 +29,7 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 .nav-btn:hover{background:var(--brand-soft);color:var(--brand)}
 .nav-btn.active{background:var(--brand-soft);color:var(--brand);box-shadow:inset 0 0 0 1px rgba(107,35,3,.16)}
 .nav-right{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0}
+.usage-count{font-size:12px;color:rgba(107,35,3,.48);white-space:nowrap;padding:0 4px}
 .nav-right .nav-btn{font-size:13px}
 
 /* ===== Main Layout ===== */
@@ -213,6 +214,7 @@ input,select,textarea{font-family:inherit;font-size:inherit}
     <button class="nav-btn" onclick="toggleStylesDropdown()" id="btnMyStyles">我的样式 ▾</button>
     <div class="styles-dropdown" id="stylesDropdown"></div>
     <button class="nav-btn" onclick="showHelp()">帮助</button>
+    <span class="usage-count" id="usageCount" title="当前浏览器本地累计打开次数">使用 0 次</span>
   </div>
 </nav>
 
@@ -379,6 +381,7 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 // STATE
 // ===================================================================
 const DEFAULT_MODE_ID = 'tutorial';
+const USAGE_COUNT_KEY = 'wx_formatter_usage_count';
 const STATE = {
   mode: DEFAULT_MODE_ID,
   titleFont: 1,
@@ -581,6 +584,7 @@ const divider = $('divider');
 // INIT
 // ===================================================================
 window.addEventListener('DOMContentLoaded', () => {
+  incrementUsageCount();
   editor.innerHTML = DEFAULT_HTML;
   applyMode(MODES.find(m => m.id === DEFAULT_MODE_ID) || MODES[0]);
   updatePreview();
@@ -592,6 +596,19 @@ window.addEventListener('DOMContentLoaded', () => {
   setupDesignMediaUploadEvents();
   updateToolbarStates();
 });
+
+function incrementUsageCount() {
+  let count = 1;
+  try {
+    const current = Number(localStorage.getItem(USAGE_COUNT_KEY) || '0');
+    count = Number.isFinite(current) && current >= 0 ? Math.floor(current) + 1 : 1;
+    localStorage.setItem(USAGE_COUNT_KEY, String(count));
+  } catch {
+    count = 1;
+  }
+  const el = $('usageCount');
+  if (el) el.textContent = `使用 ${count} 次`;
+}
 
 // ===================================================================
 // EDITOR COMMANDS
