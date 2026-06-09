@@ -54,6 +54,8 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 .editor{flex:1;padding:24px 28px;overflow-y:auto;outline:none;font-size:15px;line-height:1.8;color:var(--text);background:var(--white)}
 .editor:empty::before{content:attr(data-placeholder);color:#CCC;pointer-events:none}
 .editor img{max-width:100%;height:auto;border-radius:12px;margin:8px 0;display:block}
+.editor img[draggable="true"]{cursor:grab}
+.editor img.editor-img-drop-target{outline:2px dashed var(--primary);outline-offset:3px}
 .editor-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 16px;background:var(--white);border-top:1px solid var(--border);font-size:12px;color:var(--text3);flex-shrink:0}
 .editor-footer-left{display:flex;align-items:center;gap:10px;min-width:0}
 .clear-editor-btn{height:26px;padding:0 10px;border:1px solid rgba(107,35,3,.18);border-radius:4px;background:#FFF7F2;color:var(--brand);font-size:12px;font-weight:600;white-space:nowrap;transition:all .15s}
@@ -1802,6 +1804,22 @@ function restoreEditorRange(range) {
 function buildSingleImageHTML(src) {
   return `<img src="${escapeAttr(src)}" style="max-width:100%;border-radius:12px;height:auto;display:block;margin:12px auto;" alt="image"><br>`;
 }
+function buildImagePairHTML(srcList, options = {}) {
+  const safeList = (Array.isArray(srcList) ? srcList : []).map(sanitizeImageSrc).filter(Boolean).slice(0, 2);
+  if (safeList.length < 2) return '';
+  const width = clampNumber(options.width, 10, 100, 100);
+  const align = ['left', 'center', 'right'].includes(options.align) ? options.align : 'center';
+  const radius = clampNumber(options.radius, 0, 50, 12);
+  const borderStyle = options.borderStyle ? String(options.borderStyle) : '';
+  const groupMargin = align === 'right' ? '12px 0 12px auto' : align === 'left' ? '12px auto 12px 0' : '12px auto';
+  const baseStyle = `max-width:100%;border-radius:${radius}px;height:auto;${borderStyle}`;
+  const cells = safeList.map((src, idx) => {
+    const padding = idx === 0 ? '0 0.5mm 0 0' : '0 0 0 0.5mm';
+    const imgStyle = baseStyle + 'display:block;width:100%;max-width:100%;margin:0;object-fit:cover;box-sizing:border-box;';
+    return `<td style="width:50%;padding:${padding};vertical-align:top;box-sizing:border-box;"><img src="${escapeAttr(src)}" style="${escapeAttr(imgStyle)}" alt="image ${idx + 1}"></td>`;
+  }).join('');
+  return `<table data-layout="image-pair" style="width:${width}%;max-width:100%;margin:${groupMargin};border-collapse:separate;border-spacing:0;table-layout:fixed;box-sizing:border-box;"><tbody><tr>${cells}</tr></tbody></table><p><br></p>`;
+}
 function toggleImgPanel() {
   // Save cursor position before opening panel
   const sel = window.getSelection();
@@ -1889,17 +1907,16 @@ function doInsertImage() {
   const radius = clampNumber($('imgRadius').value, 0, 50, 12);
   const borderW = clampNumber($('imgBorderW').value, 0, 10, 0);
   let baseStyle = `max-width:${isDouble ? 100 : w}%;border-radius:${radius}px;height:auto;`;
+  let pairBorderStyle = '';
   if (borderW > 0) {
     const c1 = sanitizeColorValue($('imgBorderC1').value, '#E5E7EB');
     const c2 = sanitizeColorValue($('imgBorderC2').value, '#0066FF');
-    baseStyle = `max-width:${isDouble ? 100 : w}%;border-radius:${radius}px;height:auto;border:${borderW}px solid transparent;background-clip:padding-box;box-shadow:0 0 0 ${borderW}px ${c1},inset 0 0 0 0 transparent;background-image:linear-gradient(white,white),linear-gradient(135deg,${c1},${c2});background-origin:border-box;background-clip:padding-box,border-box;`;
+    pairBorderStyle = `border:${borderW}px solid transparent;background-clip:padding-box;box-shadow:0 0 0 ${borderW}px ${c1},inset 0 0 0 0 transparent;background-image:linear-gradient(white,white),linear-gradient(135deg,${c1},${c2});background-origin:border-box;background-clip:padding-box,border-box;`;
+    baseStyle = `max-width:${isDouble ? 100 : w}%;border-radius:${radius}px;height:auto;${pairBorderStyle}`;
   }
   let imgHtml = '';
   if (isDouble) {
-    const groupMargin = align === 'right' ? '12px 0 12px auto' : align === 'left' ? '12px auto 12px 0' : '12px auto';
-    const groupWidth = `${w}%`;
-    const cells = srcList.map((src, idx) => `<td style="width:50%;padding:${idx === 0 ? '0 0.5mm 0 0' : '0 0 0 0.5mm'};vertical-align:top;box-sizing:border-box;"><img src="${escapeAttr(src)}" style="${escapeAttr(baseStyle + 'display:block;width:100%;max-width:100%;margin:0;object-fit:cover;box-sizing:border-box;')}" alt="image ${idx + 1}"></td>`).join('');
-    imgHtml = `<table data-layout="image-pair" style="width:${groupWidth};max-width:100%;margin:${groupMargin};border-collapse:separate;border-spacing:0;table-layout:fixed;box-sizing:border-box;"><tbody><tr>${cells}</tr></tbody></table><p><br></p>`;
+    imgHtml = buildImagePairHTML(srcList, { align, width: w, radius, borderStyle: pairBorderStyle });
   } else {
     let style = baseStyle;
     if (align === 'center') style += 'display:block;margin:12px auto;';
@@ -1934,6 +1951,122 @@ function doInsertImage() {
     uploadArea.innerHTML = `<div class="img-upload-area" onclick="document.getElementById('imgFileInput').click()">点击选择图片，双图并排可一次选择2张<input type="file" id="imgFileInput" accept="image/png,image/jpeg,image/gif,image/webp" onchange="handleImgFile(this)" multiple></div>`;
   }
   scheduleUpdate();
+}
+
+let draggedEditorImage = null;
+
+function getEditorImageFromNode(node) {
+  const img = node?.closest?.('img');
+  if (!img || !editor.contains(img)) return null;
+  if (img.closest('[data-theme-component="design-intro"]')) return null;
+  return img;
+}
+
+function getImagePairTable(img) {
+  return img?.closest?.('table[data-layout="image-pair"]') || null;
+}
+
+function enableEditorImageDragHandles() {
+  editor.querySelectorAll('img').forEach(img => {
+    if (img.closest('[data-theme-component="design-intro"]')) {
+      img.draggable = false;
+      return;
+    }
+    img.draggable = true;
+    img.title = img.title || '拖到另一张图片上可并排；并排图内拖动可换位';
+  });
+}
+
+function clearImageDropTargets() {
+  editor.querySelectorAll('img.editor-img-drop-target').forEach(img => {
+    img.classList.remove('editor-img-drop-target');
+  });
+}
+
+function removeImageAndTrailingBreak(img) {
+  if (!img || !img.parentNode) return;
+  const parent = img.parentNode;
+  const next = img.nextSibling;
+  img.remove();
+  if (next && next.nodeType === Node.ELEMENT_NODE && next.tagName === 'BR') next.remove();
+  if (parent !== editor && parent.nodeType === Node.ELEMENT_NODE) {
+    const hasMeaningfulContent = (parent.textContent || '').trim() || parent.querySelector('img,table,hr,blockquote,h1,h2,h3,pre,ul,ol,section');
+    if (!hasMeaningfulContent) parent.remove();
+  }
+}
+
+function swapPairImages(a, b) {
+  const aCell = a?.closest?.('td');
+  const bCell = b?.closest?.('td');
+  if (!aCell || !bCell || aCell === bCell) return false;
+  const tmp = aCell.innerHTML;
+  aCell.innerHTML = bCell.innerHTML;
+  bCell.innerHTML = tmp;
+  enableEditorImageDragHandles();
+  return true;
+}
+
+function pairEditorImages(a, b) {
+  if (!a || !b || a === b) return false;
+  const aPair = getImagePairTable(a);
+  const bPair = getImagePairTable(b);
+  if (aPair || bPair) {
+    if (aPair && aPair === bPair) return swapPairImages(a, b);
+    return false;
+  }
+  const follows = !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+  const first = follows ? a : b;
+  const second = follows ? b : a;
+  const firstSrc = sanitizeImageSrc(first.getAttribute('src') || first.src);
+  const secondSrc = sanitizeImageSrc(second.getAttribute('src') || second.src);
+  if (!firstSrc || !secondSrc) return false;
+  const radius = parseCssNumber(first.style.borderRadius || second.style.borderRadius) ?? 12;
+  const html = buildImagePairHTML([firstSrc, secondSrc], { align: 'center', width: 100, radius });
+  if (!html) return false;
+  const tpl = document.createElement('template');
+  tpl.innerHTML = sanitizeContentHTML(html);
+  first.parentNode.insertBefore(tpl.content, first);
+  removeImageAndTrailingBreak(first);
+  removeImageAndTrailingBreak(second);
+  enableEditorImageDragHandles();
+  return true;
+}
+
+function setupEditorImageDragEvents() {
+  editor.addEventListener('mouseover', e => {
+    if (getEditorImageFromNode(e.target)) enableEditorImageDragHandles();
+  });
+  editor.addEventListener('dragstart', e => {
+    const img = getEditorImageFromNode(e.target);
+    if (!img) return;
+    draggedEditorImage = img;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', 'editor-image');
+  });
+  editor.addEventListener('dragover', e => {
+    const target = getEditorImageFromNode(e.target);
+    clearImageDropTargets();
+    if (!draggedEditorImage || !target || target === draggedEditorImage) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    target.classList.add('editor-img-drop-target');
+  });
+  editor.addEventListener('drop', e => {
+    const target = getEditorImageFromNode(e.target);
+    if (!draggedEditorImage || !target || target === draggedEditorImage) return;
+    e.preventDefault();
+    if (pairEditorImages(draggedEditorImage, target)) {
+      ensureEndingBlockAtEnd();
+      scheduleUpdate();
+    }
+    draggedEditorImage = null;
+    clearImageDropTargets();
+  });
+  editor.addEventListener('dragend', () => {
+    draggedEditorImage = null;
+    clearImageDropTargets();
+    scheduleUpdate();
+  });
 }
 
 // ===================================================================
@@ -2898,6 +3031,7 @@ function plainTextToParagraphHTML(text) {
 }
 
 function setupEditorEvents() {
+  setupEditorImageDragEvents();
   editor.addEventListener('paste', e => {
     const pasteBeforeEnding = movePastePointBeforeEndingIfNeeded();
     const imageFiles = getClipboardImageFiles(e.clipboardData);
@@ -2917,6 +3051,7 @@ function setupEditorEvents() {
         restoreEditorRange(pasteRange);
         insertPasteHTML(safeItems.map(item => buildSingleImageHTML(item.src)).join(''), pasteBeforeEnding);
         ensureEndingBlockAtEnd();
+        enableEditorImageDragHandles();
         scheduleUpdate();
       });
       return;
@@ -3143,6 +3278,7 @@ function updatePreview() {
   applyUserAlignmentOverrides(preview);
   applyBgTexture();
   updateCounts();
+  enableEditorImageDragHandles();
 }
 
 function applyUserAlignmentOverrides(root) {
