@@ -180,6 +180,11 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 .align-option{width:100%;height:30px;display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:4px;color:var(--brand);font-size:12px;text-align:left}
 .align-option:hover,.align-option.active{background:var(--brand-soft)}
 .align-option .icon{width:18px;text-align:center;font-size:14px}
+.list-panel{position:absolute;top:100%;left:0;background:var(--white);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 16px rgba(0,0,0,.12);width:132px;padding:6px;z-index:245;display:none}
+.list-panel.show{display:block}
+.list-option{width:100%;height:30px;display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:4px;color:var(--brand);font-size:12px;text-align:left}
+.list-option:hover,.list-option.active{background:var(--brand-soft)}
+.list-option .icon{width:18px;text-align:center;font-size:14px}
 
 /* ===== Help Modal ===== */
 .help-content{font-size:13px;line-height:1.8;color:var(--text2)}
@@ -244,8 +249,13 @@ input,select,textarea{font-family:inherit;font-size:inherit}
           <button class="align-option" id="alignOptionRight" onclick="chooseTextAlign('right')"><span class="icon">↦</span>右对齐</button>
         </div>
       </div>
-      <button class="tb-btn" id="btnUl" title="无序列表" onclick="execCmd('insertUnorderedList')">•≡</button>
-      <button class="tb-btn" id="btnOl" title="有序列表" onclick="execCmd('insertOrderedList')">1.</button>
+      <div style="position:relative">
+        <button class="tb-btn" id="btnList" title="列表" onclick="toggleListPanel()">•≡</button>
+        <div class="list-panel" id="listPanel">
+          <button class="list-option" id="listOptionUl" onclick="chooseList('insertUnorderedList')"><span class="icon">•≡</span>无序列表</button>
+          <button class="list-option" id="listOptionOl" onclick="chooseList('insertOrderedList')"><span class="icon">1.</span>有序列表</button>
+        </div>
+      </div>
       <span class="tb-sep"></span>
       <div style="position:relative">
         <button class="tb-btn" title="插入图片" onclick="toggleImgPanel()" id="btnImg">📷</button>
@@ -310,7 +320,6 @@ input,select,textarea{font-family:inherit;font-size:inherit}
       </div>
       <span class="tb-sep"></span>
       <button class="tb-btn" title="文字高亮" onclick="applyTextHighlight()" id="btnHighlight" style="font-size:13px">🖍</button>
-      <button class="tb-btn" title="插入编号标题" onclick="insertNumberedHeading()" style="font-size:12px">01§</button>
       <button class="tb-btn" title="插入提示卡片" onclick="insertTipCard()" style="font-size:13px">📋</button>
       <button class="tb-btn" title="设计排版组件" onclick="showDesignLayoutPanel()" style="font-size:12px;width:auto;padding:0 10px">🎛设计</button>
       <span class="tb-sep"></span>
@@ -550,10 +559,9 @@ const DEFAULT_HTML = `<p>支持 <strong>8种排版模式</strong>、6种标题�
 </ul>
 <blockquote>好的排版不仅是视觉上的美感，更是对读者阅读体验的尊重。每一处渐变、每一个圆角、每一个间距都在传达用心。</blockquote>
 <h2>特色工具</h2>
-<p>工具栏提供了三个进阶组件，让文章层次更丰富：</p>
+<p>工具栏提供了两个进阶组件，让文章层次更丰富：</p>
 <ol>
 <li><strong>文字高亮 🖍</strong> — 选中文字后点击，一键变为主色加粗强调</li>
-<li><strong>编号标题 01§</strong> — 插入带序号的分段标题，适合结构化长文</li>
 <li><strong>提示卡片 📋</strong> — 插入圆角卡片区块，适合Tips/注意事项</li>
 </ol>
 <h3>Markdown 语法支持</h3>
@@ -670,6 +678,7 @@ function toggleAlignPanel() {
   p.classList.toggle('show');
   $('imgPanel')?.classList.remove('show');
   $('hrPanel')?.classList.remove('show');
+  $('listPanel')?.classList.remove('show');
   updateToolbarStates();
 }
 
@@ -677,6 +686,25 @@ function chooseTextAlign(align) {
   if (savedEditorRange) restoreEditorRange(savedEditorRange);
   applyTextAlign(align);
   $('alignPanel')?.classList.remove('show');
+}
+
+function toggleListPanel() {
+  const sel = window.getSelection();
+  if (sel.rangeCount > 0 && editor.contains(sel.anchorNode)) {
+    savedEditorRange = sel.getRangeAt(0).cloneRange();
+  }
+  const p = $('listPanel');
+  p.classList.toggle('show');
+  $('imgPanel')?.classList.remove('show');
+  $('hrPanel')?.classList.remove('show');
+  $('alignPanel')?.classList.remove('show');
+  updateToolbarStates();
+}
+
+function chooseList(command) {
+  if (savedEditorRange) restoreEditorRange(savedEditorRange);
+  execCmd(command);
+  $('listPanel')?.classList.remove('show');
 }
 
 function getSelectionRangeInEditor() {
@@ -798,8 +826,12 @@ function updateToolbarStates() {
   try {
     setToolbarActive('btnBold', document.queryCommandState('bold'));
     setToolbarActive('btnItalic', document.queryCommandState('italic'));
-    setToolbarActive('btnUl', document.queryCommandState('insertUnorderedList'));
-    setToolbarActive('btnOl', document.queryCommandState('insertOrderedList'));
+    const inUl = document.queryCommandState('insertUnorderedList');
+    const inOl = document.queryCommandState('insertOrderedList');
+    setToolbarActive('btnList', inUl || inOl);
+    setToolbarActive('listOptionUl', inUl);
+    setToolbarActive('listOptionOl', inOl);
+    if ($('btnList')) $('btnList').textContent = inOl ? '1.' : '•≡';
   } catch (e) {}
   setToolbarActive('btnQuote', isSelectionInBlockFormat('BLOCKQUOTE'));
   setToolbarActive('btnHighlight', isSelectionInEditorHighlight());
@@ -1264,7 +1296,7 @@ function normalizeWechatInlineLayouts(root) {
         const divider = h.querySelector('[data-theme-role="knowledge-heading-divider"]');
         const title = h.querySelector('[data-theme-role="knowledge-heading-title"]');
         h.style.color = main;
-        h.style.padding = '18px 0 0';
+        h.style.padding = '18px 0 8px';
         h.style.borderLeft = 'none';
         h.style.borderBottom = `1px solid ${alphaColor(main, 0.18, '#D8DEE8')}`;
         h.style.textAlign = 'left';
@@ -1272,11 +1304,11 @@ function normalizeWechatInlineLayouts(root) {
           box.style.display = 'inline-block';
           box.style.maxWidth = '100%';
           box.style.boxSizing = 'border-box';
-          box.style.padding = h.tagName === 'H1' ? '14px 24px 14px 18px' : '12px 20px 12px 16px';
-          box.style.border = `2px solid ${main}`;
-          box.style.borderRadius = '2px';
-          box.style.background = '#FFFFFF';
-          box.style.marginBottom = '-1px';
+          box.style.padding = '0';
+          box.style.border = 'none';
+          box.style.borderRadius = '0';
+          box.style.background = 'transparent';
+          box.style.marginBottom = '0';
         }
         if (num) {
           num.style.display = 'inline-block';
@@ -1327,30 +1359,6 @@ function normalizeWechatInlineLayouts(root) {
         h.style.borderBottom = `2px solid ${alphaColor(main, 0.32, '#D4D4D4')}`;
         h.style.textAlign = 'center';
       }
-    }
-  });
-
-  Array.from(root.querySelectorAll('[data-theme-component="numbered-heading"]')).forEach(el => {
-    const num = el.querySelector('[data-theme-role="number"]');
-    const divider = el.querySelector('[data-theme-role="divider"]');
-    const title = el.querySelector('[data-theme-role="title"]');
-    el.style.display = 'block';
-    el.style.width = '100%';
-    el.style.maxWidth = '100%';
-    el.style.boxSizing = 'border-box';
-    if (num) {
-      num.style.display = 'inline-block';
-      num.style.verticalAlign = 'middle';
-      num.style.marginRight = '12px';
-    }
-    if (divider) {
-      divider.style.display = 'inline-block';
-      divider.style.verticalAlign = 'middle';
-      divider.style.marginRight = '12px';
-    }
-    if (title) {
-      title.style.display = 'inline';
-      title.style.verticalAlign = 'middle';
     }
   });
 
@@ -1896,6 +1904,7 @@ function toggleImgPanel() {
   p.classList.toggle('show');
   $('hrPanel')?.classList.remove('show');
   $('alignPanel')?.classList.remove('show');
+  $('listPanel')?.classList.remove('show');
 }
 function toggleHrPanel() {
   const sel = window.getSelection();
@@ -1906,6 +1915,7 @@ function toggleHrPanel() {
   p.classList.toggle('show');
   $('imgPanel')?.classList.remove('show');
   $('alignPanel')?.classList.remove('show');
+  $('listPanel')?.classList.remove('show');
 }
 function insertDivider(style) {
   restoreEditorRange(savedEditorRange);
@@ -2213,29 +2223,6 @@ function unwrapElement(el) {
   while (el.firstChild) parent.insertBefore(el.firstChild, el);
   parent.removeChild(el);
   parent.normalize();
-}
-
-// ===================================================================
-// INSERT NUMBERED HEADING
-// ===================================================================
-let _sectionCounter = 0;
-function insertNumberedHeading() {
-  _sectionCounter++;
-  const num = String(_sectionCounter).padStart(2, '0');
-  const c = getColors();
-  const mainColor = c.main || '#133363';
-  const html = `<div data-theme-component="numbered-heading" style="display:flex;align-items:center;padding:14px 0;border-bottom:1px solid ${alphaColor(mainColor, 0.22, '#d4d4d4')};margin:1.2em 0 0.6em;">
-    <div style="flex-shrink:0;padding-right:16px;min-width:48px;text-align:center;">
-      <span data-theme-role="number" style="font-size:32px;font-weight:900;color:${mainColor};line-height:1;letter-spacing:-1px;">${num}</span>
-    </div>
-    <div data-theme-role="divider" style="width:1px;height:36px;background:${alphaColor(mainColor, 0.26, '#c8c8c8')};flex-shrink:0;margin-right:16px;"></div>
-    <div style="flex:1;">
-      <span data-theme-role="title" style="font-size:18px;font-weight:700;color:${mainColor};line-height:1.4;letter-spacing:0.02em;">在此输入标题</span>
-    </div>
-  </div><p><br></p>`;
-  document.execCommand('insertHTML', false, html);
-  editor.focus();
-  scheduleUpdate();
 }
 
 // ===================================================================
@@ -3739,69 +3726,6 @@ function applyThemedComponents(c) {
   const text = c.text || '#333333';
   const grad = c.gradient || `linear-gradient(135deg, ${main}, ${accent})`;
   const mode = MODES.find(m => m.id === STATE.mode) || MODES[0];
-  const journalPaper = c.paper || c.sub || '#FFF6E8';
-
-  preview.querySelectorAll('[data-theme-component="numbered-heading"]').forEach(el => {
-    el.style.borderBottom = `1px solid ${alphaColor(main, 0.24, '#d4d4d4')}`;
-    const num = el.querySelector('[data-theme-role="number"]');
-    const divider = el.querySelector('[data-theme-role="divider"]');
-    const title = el.querySelector('[data-theme-role="title"]');
-    if (mode.id === 'coffee-journal') {
-      const numWrap = num ? num.parentElement : null;
-      const titleWrap = title ? title.parentElement : null;
-      el.style.display = 'flex';
-      el.style.alignItems = 'center';
-      el.style.gap = '10px';
-      el.style.margin = '1.4em 0 0.9em';
-      el.style.padding = '11px 14px';
-      el.style.border = `1px solid ${alphaColor(main,0.22,'#E7D6BE')}`;
-      el.style.borderLeft = `4px solid ${main}`;
-      el.style.borderRadius = '10px';
-      el.style.background = `linear-gradient(90deg, ${journalPaper} 0%, #FFFFFF 78%)`;
-      el.style.boxShadow = `0 3px 12px ${alphaColor(main,0.06,'rgba(200,135,78,0.06)')}`;
-      if (numWrap) {
-        numWrap.style.order = '1';
-        numWrap.style.minWidth = '0';
-        numWrap.style.paddingRight = '0';
-        numWrap.style.textAlign = 'left';
-      }
-      if (num) {
-        num.style.display = 'inline-flex';
-        num.style.alignItems = 'center';
-        num.style.justifyContent = 'center';
-        num.style.width = '28px';
-        num.style.height = '28px';
-        num.style.borderRadius = '8px';
-        num.style.background = main;
-        num.style.color = '#FFFFFF';
-        num.style.fontSize = '13px';
-        num.style.letterSpacing = '0';
-        num.style.boxShadow = `0 3px 0 ${alphaColor(main,0.14,'rgba(200,135,78,0.14)')}`;
-      }
-      if (titleWrap) {
-        titleWrap.style.order = '2';
-        titleWrap.style.flex = '1';
-        titleWrap.style.minWidth = '0';
-      }
-      if (divider) {
-        divider.style.order = '3';
-        divider.style.width = '28px';
-        divider.style.height = '1px';
-        divider.style.background = accent;
-        divider.style.opacity = '0.55';
-        divider.style.margin = '0';
-        divider.style.flexShrink = '0';
-      }
-      if (title) {
-        title.style.color = text;
-        title.style.fontSize = '17px';
-      }
-      return;
-    }
-    if (num) num.style.color = main;
-    if (divider) divider.style.background = alphaColor(main, 0.28, '#c8c8c8');
-    if (title) title.style.color = main;
-  });
 
   preview.querySelectorAll('[data-theme-component="tip-card"]').forEach(el => {
     el.style.background = sub;
@@ -4114,7 +4038,7 @@ function applyHeadingStyle(h, style, c, tag) {
       h.style.fontSize = tag === 'H1' ? '20px' : tag === 'H2' ? '18px' : '16px';
       h.style.borderBottom = `1px solid ${alphaColor(c.main, 0.18, '#D8DEE8')}`;
       h.style.borderLeft = 'none';
-      h.style.padding = '18px 0 0';
+      h.style.padding = '18px 0 8px';
       h.style.letterSpacing = '0.02em';
       h.style.textAlign = 'left';
       h.style.background = 'transparent';
@@ -4135,11 +4059,11 @@ function applyHeadingStyle(h, style, c, tag) {
           box.style.display = 'inline-block';
           box.style.maxWidth = '100%';
           box.style.boxSizing = 'border-box';
-          box.style.padding = tag === 'H1' ? '14px 24px 14px 18px' : '12px 20px 12px 16px';
-          box.style.border = `2px solid ${c.main}`;
-          box.style.borderRadius = '2px';
-          box.style.background = '#FFFFFF';
-          box.style.marginBottom = '-1px';
+          box.style.padding = '0';
+          box.style.border = 'none';
+          box.style.borderRadius = '0';
+          box.style.background = 'transparent';
+          box.style.marginBottom = '0';
         }
         if (num) {
           num.style.display = 'inline-block';
