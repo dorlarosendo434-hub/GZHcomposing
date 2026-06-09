@@ -112,6 +112,17 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 .custom-color-grid label{font-size:11px;color:var(--text3)}
 .custom-color-grid input[type=text]{padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:11px;width:80px}
 .custom-color-grid input[type=color]{width:28px;height:28px;border:1px solid var(--border);border-radius:4px;padding:1px}
+.custom-palette-slots{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.custom-palette-slot{display:grid;grid-template-columns:32px 1fr auto;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);border-radius:6px;background:#fff}
+.custom-palette-slot.empty{background:#FAFAFA;color:var(--text3)}
+.custom-palette-slot.active{border-color:var(--primary);box-shadow:0 0 0 1px rgba(107,35,3,.08)}
+.slot-chip{width:28px;height:28px;border-radius:4px;overflow:hidden;border:1px solid rgba(0,0,0,.08);display:grid;grid-template-columns:1.35fr 1fr 1fr;background:#F4F4F5}
+.slot-chip span{display:block;min-width:0}
+.slot-info{min-width:0;font-size:12px;color:var(--text)}
+.slot-info small{display:block;margin-top:2px;color:var(--text3);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot-actions{display:flex;gap:4px;align-items:center}
+.slot-actions button{height:24px;padding:0 7px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--brand);font-size:11px;white-space:nowrap}
+.slot-actions button:hover{border-color:var(--primary);color:var(--primary)}
 
 /* ===== Mode Cards ===== */
 .mode-cards{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -4387,6 +4398,18 @@ function renderColorSettings(title, body) {
   });
   html += '</div></div>';
 
+  html += '<div class="sp-section"><h4>我的配色</h4><div class="custom-palette-slots">';
+  getCustomPaletteSlots().forEach((slot, i) => {
+    if (slot) {
+      const active = isCustomPaletteActive(slot) ? ' active' : '';
+      const colors = [slot.main, slot.accent, slot.sub].map(c => escapeAttr(sanitizeColorValue(c, '#CCCCCC')));
+      html += `<div class="custom-palette-slot${active}"><div class="slot-chip" title="自定义配色 ${i + 1}"><span style="background:${colors[0]}"></span><span style="background:${colors[1]}"></span><span style="background:${colors[2]}"></span></div><div class="slot-info">自定义配色 ${i + 1}<small>${escapeHtml(slot.main)} / ${escapeHtml(slot.accent)} / ${escapeHtml(slot.sub)}</small></div><div class="slot-actions"><button onclick="applyCustomPaletteSlot(${i})">应用</button><button onclick="saveCustomPaletteSlot(${i})">覆盖</button><button onclick="clearCustomPaletteSlot(${i})">清空</button></div></div>`;
+    } else {
+      html += `<div class="custom-palette-slot empty"><div class="slot-chip"><span></span><span></span><span></span></div><div class="slot-info">空槽 ${i + 1}<small>保存当前配色到本机浏览器</small></div><div class="slot-actions"><button onclick="saveCustomPaletteSlot(${i})">保存当前</button></div></div>`;
+    }
+  });
+  html += '</div></div>';
+
   // Custom colors
   const cc = getColors();
   html += '<div class="sp-section"><h4>自定义配色</h4>';
@@ -4406,6 +4429,76 @@ function selectColorScheme(i) {
   STATE.colorScheme = i;
   STATE.customColors = null;
   updatePreview();
+  renderColorSettings($('spTitle'), $('spBody'));
+}
+
+const CUSTOM_PALETTE_SLOTS_KEY = 'wx_formatter_custom_palette_slots';
+
+function sanitizeCustomPalette(item, fallback = COLOR_SCHEMES[STATE.colorScheme] || COLOR_SCHEMES[0]) {
+  if (!item || typeof item !== 'object') return null;
+  const base = fallback || COLOR_SCHEMES[0];
+  const palette = {
+    name: '自定义',
+    main: sanitizeColorValue(item.main, base.main),
+    sub: sanitizeColorValue(item.sub, base.sub),
+    accent: sanitizeColorValue(item.accent, base.accent),
+    text: sanitizeColorValue(item.text, base.text),
+    bg: sanitizeColorValue(item.bg, base.bg)
+  };
+  palette.gradient = `linear-gradient(135deg, ${palette.main}, ${palette.accent})`;
+  return palette;
+}
+
+function getCustomPaletteSlots() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(CUSTOM_PALETTE_SLOTS_KEY) || '[]');
+    const slots = Array.isArray(raw) ? raw : [];
+    return [0, 1, 2].map(i => sanitizeCustomPalette(slots[i]));
+  } catch {
+    return [null, null, null];
+  }
+}
+
+function setCustomPaletteSlots(slots) {
+  const safe = [0, 1, 2].map(i => sanitizeCustomPalette(slots?.[i]));
+  localStorage.setItem(CUSTOM_PALETTE_SLOTS_KEY, JSON.stringify(safe));
+}
+
+function getCurrentPaletteSnapshot() {
+  const c = getColors();
+  return sanitizeCustomPalette(c, COLOR_SCHEMES[STATE.colorScheme] || COLOR_SCHEMES[0]);
+}
+
+function isCustomPaletteActive(palette) {
+  if (!STATE.customColors || !palette) return false;
+  const c = getColors();
+  return ['main', 'sub', 'accent', 'text', 'bg'].every(key => {
+    return sanitizeColorValue(c[key], '#000000').toUpperCase() === sanitizeColorValue(palette[key], '#000000').toUpperCase();
+  });
+}
+
+function saveCustomPaletteSlot(i) {
+  const idx = Math.round(clampNumber(i, 0, 2, 0));
+  const slots = getCustomPaletteSlots();
+  slots[idx] = getCurrentPaletteSnapshot();
+  setCustomPaletteSlots(slots);
+  renderColorSettings($('spTitle'), $('spBody'));
+}
+
+function applyCustomPaletteSlot(i) {
+  const idx = Math.round(clampNumber(i, 0, 2, 0));
+  const slot = getCustomPaletteSlots()[idx];
+  if (!slot) return;
+  STATE.customColors = sanitizeCustomPalette(slot);
+  updatePreview();
+  renderColorSettings($('spTitle'), $('spBody'));
+}
+
+function clearCustomPaletteSlot(i) {
+  const idx = Math.round(clampNumber(i, 0, 2, 0));
+  const slots = getCustomPaletteSlots();
+  slots[idx] = null;
+  setCustomPaletteSlots(slots);
   renderColorSettings($('spTitle'), $('spBody'));
 }
 
