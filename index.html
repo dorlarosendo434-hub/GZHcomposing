@@ -323,8 +323,6 @@ input,select,textarea{font-family:inherit;font-size:inherit}
       <button class="tb-btn" title="插入提示卡片" onclick="insertTipCard()" style="font-size:13px">📋</button>
       <button class="tb-btn" title="设计排版组件" onclick="showDesignLayoutPanel()" style="font-size:12px;width:auto;padding:0 10px">🎛设计</button>
       <span class="tb-sep"></span>
-      <button class="tb-btn" title="插入结尾" onclick="showEndingPanel()" style="font-size:12px">📝结尾</button>
-      <span class="tb-sep"></span>
       <button class="tb-btn" title="智能预处理：按文章类型整理纯文本" onclick="smartPreprocess()" style="font-size:12px;background:#FFF3EC;color:#6B2303;font-weight:700;padding:0 10px;width:auto">✨预处理</button>
     </div>
     <div class="editor-wrap">
@@ -1362,7 +1360,7 @@ function normalizeWechatInlineLayouts(root) {
     }
   });
 
-  Array.from(root.querySelectorAll('[data-theme-component="tip-card"], [data-theme-component="design-heading"], [data-theme-component="design-intro"], [data-theme-component="design-ending"]')).forEach(el => {
+  Array.from(root.querySelectorAll('[data-theme-component="tip-card"], [data-theme-component="design-heading"], [data-theme-component="design-intro"]')).forEach(el => {
     if ((el.style.display || '').toLowerCase().includes('flex')) el.style.display = 'block';
     el.style.width = '100%';
     el.style.maxWidth = '100%';
@@ -1545,11 +1543,6 @@ function normalizeWechatEndingLayouts(root) {
     const legacyIcon = block.querySelector('[data-theme-role="icon-main"],[data-theme-role="icon-sub"],[data-theme-role="icon-accent"]');
     if (legacyIcon) normalizeHorizontalRow(legacyIcon.parentElement);
   });
-
-  root.querySelectorAll('[data-theme-component="design-ending"] [data-theme-role="action-row"]').forEach(row => {
-    normalizeHorizontalRow(row);
-  });
-  root.querySelectorAll('[data-theme-component="design-ending"] [data-theme-role="share"]').forEach(share => normalizeHorizontalRow(share.parentElement));
 }
 
 function ensureTerminalCodeBar(pre) {
@@ -2286,7 +2279,7 @@ function showDesignLayoutPanel() {
   const main = c.main || '#059669';
   showModal(`
     <h3>设计排版组件</h3>
-    <p style="font-size:12px;color:#999;margin-bottom:16px">复刻品牌实战类文章结构：开头总结框、小标题和结尾。</p>
+    <p style="font-size:12px;color:#999;margin-bottom:16px">复刻品牌实战类文章结构：开头总结框、小标题和常用结尾样式。</p>
       <div id="designLayoutChoices" style="display:grid;grid-template-columns:1fr;gap:10px">
       <button type="button" data-design-action="intro" style="border:2px solid #e5e7eb;border-radius:8px;padding:14px;cursor:pointer;transition:all .2s;background:#fff;text-align:left">
         <div style="font-size:13px;font-weight:700;color:${main};margin-bottom:4px">开头总结框</div>
@@ -2296,9 +2289,13 @@ function showDesignLayoutPanel() {
         <div style="font-size:13px;font-weight:700;color:${main};margin-bottom:4px">设计小标题</div>
         <div style="font-size:11px;color:#999">左侧大编号 + PART，右侧标题 + 英文副标题</div>
       </button>
-      <button type="button" data-design-action="ending" style="border:2px solid #e5e7eb;border-radius:8px;padding:14px;cursor:pointer;transition:all .2s;background:#fff;text-align:left">
-        <div style="font-size:13px;font-weight:700;color:${main};margin-bottom:4px">设计结尾</div>
-        <div style="font-size:11px;color:#999">/// LAST 标题、强调句、总结卡和互动引导</div>
+      <button type="button" data-design-action="ending-signature" style="border:2px solid #e5e7eb;border-radius:8px;padding:14px;cursor:pointer;transition:all .2s;background:#fff;text-align:left">
+        <div style="font-size:13px;font-weight:700;color:${main};margin-bottom:4px">简约签名</div>
+        <div style="font-size:11px;color:#999">分割线 + 感谢阅读 + 签名</div>
+      </button>
+      <button type="button" data-design-action="ending-gradient" style="border:2px solid #e5e7eb;border-radius:8px;padding:14px;cursor:pointer;transition:all .2s;background:#fff;text-align:left">
+        <div style="font-size:13px;font-weight:700;color:${main};margin-bottom:4px">渐变卡片引导</div>
+        <div style="font-size:11px;color:#999">渐变背景 + 引导文字</div>
       </button>
     </div>
     <div class="modal-actions">
@@ -2318,7 +2315,8 @@ function setupDesignLayoutPanelEvents(main) {
       const action = btn.dataset.designAction;
       if (action === 'intro') insertDesignIntro();
       if (action === 'heading') insertDesignHeading();
-      if (action === 'ending') insertDesignEnding();
+      if (action === 'ending-signature') insertEnding(2);
+      if (action === 'ending-gradient') insertEnding(3);
     });
   });
 }
@@ -2387,39 +2385,6 @@ function insertDesignHeading() {
       <p data-theme-role="subtitle" style="margin:0;font-size:11px;font-weight:700;color:#9CA3AF;letter-spacing:1.5px;line-height:1.5;">KEYWORD · 在此输入副标题</p>
     </section>
   </section>`;
-  insertDesignHTML(html);
-}
-function insertDesignEnding() {
-  const c = getColors();
-  const main = c.main || '#059669';
-  const accent = c.accent || main;
-  const text = c.text || '#111827';
-  const html = `<section data-theme-component="design-ending" style="margin:48px 0 32px;padding:0 4px;">
-    <section style="display:flex;align-items:center;gap:16px;margin-bottom:22px;">
-      <section style="text-align:center;flex-shrink:0;min-width:54px;">
-        <p data-theme-role="number" style="margin:0;font-size:28px;font-weight:900;color:${main};line-height:1;letter-spacing:-1px;">///</p>
-        <p data-theme-role="label" style="margin:0;font-size:8px;font-weight:800;color:#D1D5DB;letter-spacing:2px;">LAST</p>
-      </section>
-      <section style="min-width:0;">
-        <p data-theme-role="title" style="margin:0 0 1px;font-size:17px;font-weight:900;color:${text};letter-spacing:0.3px;line-height:1.45;">写在最后</p>
-        <p data-theme-role="subtitle" style="margin:0;font-size:11px;font-weight:700;color:#9CA3AF;letter-spacing:1.5px;line-height:1.5;">OUTRO · 一句话总结</p>
-      </section>
-    </section>
-    <p data-theme-role="quote" style="font-size:14px;margin:0 0 20px;text-align:center;color:${main};font-weight:800;letter-spacing:1px;border-top:1px solid #F3F4F6;border-bottom:1px solid #F3F4F6;padding:12px 0;">把复杂流程，变成可以复用的方法</p>
-    <section data-theme-role="summary" style="background:#fff;border-radius:12px;padding:16px 20px;box-shadow:0 4px 16px ${alphaColor(main,0.12,'rgba(0,0,0,0.08)')};margin-bottom:24px;text-align:center;">
-      <p style="font-size:13px;color:#9CA3AF;margin:0 0 6px;line-height:1.5;">说到底</p>
-      <p data-theme-role="summary-title" style="margin:0;line-height:1.6;font-weight:800;color:${text};">这一套设计排版，是为了让读者快速抓住重点</p>
-    </section>
-    <section data-theme-role="action" style="background:radial-gradient(circle at center,#F9FAFB 0%,#FFFFFF 100%);border:1px solid #E5E7EB;border-radius:16px;padding:30px 20px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.03);">
-      <p style="font-size:13px;font-weight:800;color:${text};margin:0 0 20px;line-height:1.6;">既然看到这里了，如果觉得有用，随手点个赞、在看、转发三连吧。</p>
-      <section data-theme-role="action-row" style="display:block;text-align:center;white-space:nowrap;margin-bottom:16px;">
-        <span data-theme-role="action-item" style="display:inline-block;vertical-align:middle;text-align:center;color:#4B5563;font-size:13px;margin:0 12px;">点赞</span>
-        <span data-theme-role="action-item" style="display:inline-block;vertical-align:middle;text-align:center;color:#4B5563;font-size:13px;margin:0 12px;">在看</span>
-        <span data-theme-role="share" style="display:inline-block;vertical-align:middle;text-align:center;color:${main};font-size:13px;font-weight:800;margin:0 12px;">转发</span>
-      </section>
-      <p style="font-size:10px;color:#9CA3AF;letter-spacing:1px;margin:0;">THANKS FOR READING</p>
-    </section>
-  </section><p><br></p>`;
   insertDesignHTML(html);
 }
 
@@ -2816,56 +2781,15 @@ function runSmartPreprocess(mode = 'clean') {
 // ===================================================================
 // ENDING STYLES
 // ===================================================================
-function showEndingPanel() {
-  const c = getColors();
-  const mainColor = c.main || '#2563EB';
-  showModal(`
-    <h3>插入结尾样式</h3>
-    <p style="font-size:12px;color:#999;margin-bottom:16px">点击选择一种结尾样式，将插入到编辑器末尾</p>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div style="border:2px solid #e5e7eb;border-radius:8px;padding:16px;cursor:pointer;transition:all .2s;text-align:center" onmouseover="this.style.borderColor='${mainColor}'" onmouseout="this.style.borderColor='#e5e7eb'" onclick="insertEnding(1)">
-        <div style="font-size:12px;font-weight:600;margin-bottom:8px">互动引导卡</div>
-        <div style="font-size:10px;color:#999">灰底卡片+三个图标</div>
-      </div>
-      <div style="border:2px solid #e5e7eb;border-radius:8px;padding:16px;cursor:pointer;transition:all .2s;text-align:center" onmouseover="this.style.borderColor='${mainColor}'" onmouseout="this.style.borderColor='#e5e7eb'" onclick="insertEnding(2)">
-        <div style="font-size:12px;font-weight:600;margin-bottom:8px">简约签名</div>
-        <div style="font-size:10px;color:#999">分割线+感谢阅读+签名</div>
-      </div>
-      <div style="border:2px solid #e5e7eb;border-radius:8px;padding:16px;cursor:pointer;transition:all .2s;text-align:center" onmouseover="this.style.borderColor='${mainColor}'" onmouseout="this.style.borderColor='#e5e7eb'" onclick="insertEnding(3)">
-        <div style="font-size:12px;font-weight:600;margin-bottom:8px">渐变卡片引导</div>
-        <div style="font-size:10px;color:#999">渐变背景+引导文字</div>
-      </div>
-      <div style="border:2px solid #e5e7eb;border-radius:8px;padding:16px;cursor:pointer;transition:all .2s;text-align:center" onmouseover="this.style.borderColor='${mainColor}'" onmouseout="this.style.borderColor='#e5e7eb'" onclick="insertEnding(4)">
-        <div style="font-size:12px;font-weight:600;margin-bottom:8px">极简 END</div>
-        <div style="font-size:10px;color:#999">三点+END+细线</div>
-      </div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="hideModal()">取消</button>
-    </div>
-  `);
-}
-
 function insertEnding(type) {
+  const safeType = type === 3 ? 3 : 2;
   const c = getColors();
   const mainColor = c.main || '#2563EB';
   const accentColor = c.accent || mainColor;
   const subColor = c.sub || alphaColor(mainColor, 0.08, '#f5f5f5');
   const textColor = c.text || '#333';
   let html = '';
-  switch(type) {
-    case 1:
-      html = `<div data-ending-type="1" style="background:${subColor};border-radius:16px;padding:32px;text-align:center;margin:2em 0">
-        <div data-theme-role="title" style="font-size:18px;font-weight:700;color:${mainColor};margin-bottom:8px">既然看到这里了</div>
-        <div data-theme-role="body" style="font-size:14px;color:${textColor};opacity:0.72;margin-bottom:24px">如果觉得有用，先点个赞再顺手点个在看或转发</div>
-        <div data-theme-role="icon-row" style="display:block;text-align:center;white-space:nowrap;margin-bottom:24px">
-          <span data-theme-role="icon-main" style="display:inline-block;vertical-align:middle;width:48px;height:48px;line-height:48px;border-radius:50%;background:${mainColor};font-size:20px;margin:0 10px">❤️</span>
-          <span data-theme-role="icon-sub" style="display:inline-block;vertical-align:middle;width:48px;height:48px;line-height:48px;border-radius:50%;background:${alphaColor(mainColor, 0.12, '#eee')};font-size:20px;margin:0 10px">⭐</span>
-          <span data-theme-role="icon-accent" style="display:inline-block;vertical-align:middle;width:48px;height:48px;line-height:48px;border-radius:50%;background:${alphaColor(accentColor, 0.16, '#eee')};font-size:20px;margin:0 10px">↗️</span>
-        </div>
-        <div data-theme-role="meta" style="font-size:11px;color:${mainColor};opacity:0.42;letter-spacing:0.3em;text-transform:uppercase">THANKS FOR READING</div>
-      </div>`;
-      break;
+  switch(safeType) {
     case 2:
       html = `<div data-ending-type="2" style="text-align:center;margin:2em 0">
         <div data-theme-role="divider" style="width:40px;height:1px;background:${alphaColor(mainColor, 0.34, '#ddd')};margin:0 auto 20px"></div>
@@ -2881,19 +2805,12 @@ function insertEnding(type) {
         <div data-theme-role="meta" style="font-size:12px;color:${mainColor};opacity:0.52">你的支持是我创作的动力</div>
       </div>`;
       break;
-    case 4:
-      html = `<div data-ending-type="4" style="text-align:center;margin:2em 0">
-        <div data-theme-role="dots" style="font-size:14px;letter-spacing:12px;color:${mainColor};opacity:0.32;margin-bottom:16px">· · ·</div>
-        <div style="font-size:24px;letter-spacing:0.5em;color:${mainColor};font-weight:300;margin-bottom:16px">END</div>
-        <div data-theme-role="divider" style="width:60px;height:1px;background:${alphaColor(mainColor, 0.26, '#e5e7eb')};margin:0 auto"></div>
-      </div>`;
-      break;
   }
   // Remove any existing ending block first
   const existing = editor.querySelector('[data-ending-block]');
   if (existing) existing.remove();
   // Wrap in a container with marker attribute
-  html = `<div data-ending-block="true" data-theme-component="ending" data-ending-type="${type}" style="margin-top:2em">${html}</div>`;
+  html = `<div data-ending-block="true" data-theme-component="ending" data-ending-type="${safeType}" style="margin-top:2em">${html}</div>`;
   // Insert at end of editor with DOM parsing to avoid execCommand moving decorative nodes out of the ending block.
   editor.focus();
   const sel = window.getSelection();
@@ -3814,25 +3731,6 @@ function applyThemedComponents(c) {
     if (subtitle) subtitle.style.color = '#9CA3AF';
   });
 
-  preview.querySelectorAll('[data-theme-component="design-ending"]').forEach(el => {
-    const num = el.querySelector('[data-theme-role="number"]');
-    const label = el.querySelector('[data-theme-role="label"]');
-    const title = el.querySelector('[data-theme-role="title"]');
-    const subtitle = el.querySelector('[data-theme-role="subtitle"]');
-    const quote = el.querySelector('[data-theme-role="quote"]');
-    const summary = el.querySelector('[data-theme-role="summary"]');
-    const summaryTitle = el.querySelector('[data-theme-role="summary-title"]');
-    const share = el.querySelector('[data-theme-role="share"]');
-    if (num) num.style.color = main;
-    if (label) label.style.color = '#D1D5DB';
-    if (title) title.style.color = text;
-    if (subtitle) subtitle.style.color = '#9CA3AF';
-    if (quote) quote.style.color = main;
-    if (summary) summary.style.boxShadow = `0 4px 16px ${alphaColor(main,0.12,'rgba(0,0,0,0.08)')}`;
-    if (summaryTitle) summaryTitle.style.color = text;
-    if (share) share.style.color = main;
-  });
-
   preview.querySelectorAll('[data-theme-component="ending"]').forEach(block => {
     const type = block.dataset.endingType || block.querySelector('[data-ending-type]')?.dataset.endingType || '1';
     const card = block.querySelector('[data-ending-type]') || block;
@@ -3851,30 +3749,12 @@ function applyThemedComponents(c) {
     }
     if (divider) divider.style.background = alphaColor(main, 0.3, '#e5e7eb');
 
-    if (type === '1') {
-      card.style.background = sub;
-      const iconMain = card.querySelector('[data-theme-role="icon-main"]');
-      const iconSub = card.querySelector('[data-theme-role="icon-sub"]');
-      const iconAccent = card.querySelector('[data-theme-role="icon-accent"]');
-      if (iconMain) iconMain.style.background = main;
-      if (iconSub) iconSub.style.background = alphaColor(main, 0.12, '#eeeeee');
-      if (iconAccent) iconAccent.style.background = alphaColor(accent, 0.16, '#eeeeee');
-    }
     if (type === '2') {
       const thanks = card.children[1];
       if (thanks) thanks.style.color = main;
     }
     if (type === '3') {
       card.style.background = `linear-gradient(135deg, ${alphaColor(main, 0.12, sub)}, ${alphaColor(accent, 0.05, '#fff')})`;
-    }
-    if (type === '4') {
-      const dots = card.querySelector('[data-theme-role="dots"]');
-      const end = card.children[1];
-      if (dots) {
-        dots.style.color = main;
-        dots.style.opacity = '0.32';
-      }
-      if (end) end.style.color = main;
     }
   });
 }
