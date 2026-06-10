@@ -320,6 +320,7 @@ input,select,textarea{font-family:inherit;font-size:inherit}
       </div>
       <span class="tb-sep"></span>
       <button class="tb-btn" title="文字高亮" onclick="applyTextHighlight()" id="btnHighlight" style="font-size:13px">🖍</button>
+      <button class="tb-btn" title="字体背景填充" onclick="applyTextBackgroundFill()" id="btnTextBgFill" style="font-size:13px">▣</button>
       <button class="tb-btn" title="插入提示卡片" onclick="insertTipCard()" style="font-size:13px">📋</button>
       <button class="tb-btn" title="设计排版组件" onclick="showDesignLayoutPanel()" style="font-size:12px;width:auto;padding:0 10px">🎛设计</button>
       <span class="tb-sep"></span>
@@ -833,6 +834,7 @@ function updateToolbarStates() {
   } catch (e) {}
   setToolbarActive('btnQuote', isSelectionInBlockFormat('BLOCKQUOTE'));
   setToolbarActive('btnHighlight', isSelectionInEditorHighlight());
+  setToolbarActive('btnTextBgFill', isSelectionInEditorBgFill());
   const align = getCurrentUserAlign();
   setToolbarActive('btnAlign', !!align);
   setToolbarActive('alignOptionLeft', align === 'left');
@@ -989,7 +991,7 @@ function sanitizeElementTree(root) {
         return;
       }
       if (['alt','title'].includes(name)) return;
-      if (['data-ending-block','data-ending-type','data-theme-component','data-theme-role','data-layout','data-editor-highlight','data-hr-style','data-user-align'].includes(name)) return;
+      if (['data-ending-block','data-ending-type','data-theme-component','data-theme-role','data-layout','data-editor-highlight','data-editor-bgfill','data-hr-style','data-user-align'].includes(name)) return;
       node.removeAttribute(attr.name);
     });
 
@@ -2193,6 +2195,88 @@ function getIntersectingHighlights(range) {
     } catch (e) {}
   });
   return Array.from(highlights);
+}
+
+function getTextBgFillStyles(c = getColors()) {
+  const main = c.main || '#2563EB';
+  return {
+    backgroundColor: alphaColor(main, 0.16, c.sub || '#EFF6FF'),
+    color: c.text || '#1E293B'
+  };
+}
+
+function applyTextBackgroundFill() {
+  const sel = window.getSelection();
+  if (!sel.rangeCount || sel.isCollapsed) {
+    alert('请先选中要填充背景的文字');
+    return;
+  }
+  const range = getSelectionRangeInEditor();
+  if (!range) return;
+  const existing = getIntersectingBgFills(range);
+  if (existing.length) {
+    existing.forEach(unwrapElement);
+    editor.focus();
+    scheduleUpdate();
+    updateToolbarStates();
+    return;
+  }
+  const styles = getTextBgFillStyles();
+  const span = document.createElement('span');
+  span.setAttribute('data-editor-bgfill', 'true');
+  span.style.backgroundColor = styles.backgroundColor;
+  span.style.color = styles.color;
+  span.style.borderRadius = '3px';
+  span.style.padding = '0 4px';
+  span.appendChild(range.extractContents());
+  range.insertNode(span);
+  const nextRange = document.createRange();
+  nextRange.setStartAfter(span);
+  nextRange.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(nextRange);
+  editor.focus();
+  scheduleUpdate();
+  updateToolbarStates();
+}
+
+function getEditorBgFill(node) {
+  let el = getElementFromNode(node);
+  while (el && el !== editor) {
+    if (el.getAttribute('data-editor-bgfill') === 'true') return el;
+    el = el.parentElement;
+  }
+  return null;
+}
+
+function isSelectionInEditorBgFill() {
+  const range = getSelectionRangeInEditor();
+  if (!range) return false;
+  return !!getEditorBgFill(range.startContainer) && !!getEditorBgFill(range.endContainer);
+}
+
+function getIntersectingBgFills(range) {
+  const fills = new Set();
+  const start = getEditorBgFill(range.startContainer);
+  const end = getEditorBgFill(range.endContainer);
+  if (start) fills.add(start);
+  if (end) fills.add(end);
+  editor.querySelectorAll('[data-editor-bgfill="true"]').forEach(el => {
+    try {
+      if (range.intersectsNode(el)) fills.add(el);
+    } catch (e) {}
+  });
+  return Array.from(fills);
+}
+
+function applyTextBgFillStyles(root, c = getColors()) {
+  const styles = getTextBgFillStyles(c);
+  root.querySelectorAll('[data-editor-bgfill="true"]').forEach(el => {
+    el.style.backgroundColor = styles.backgroundColor;
+    el.style.color = styles.color;
+    el.style.borderRadius = '3px';
+    el.style.padding = '0 4px';
+  });
 }
 
 function getRangeHTML(range) {
@@ -3633,6 +3717,7 @@ function applyPreviewStyles() {
       img.style.background = journalPaper;
     }
   });
+  applyTextBgFillStyles(preview, c);
   applyThemedComponents(c);
 }
 
@@ -4646,6 +4731,7 @@ function inlineAllStyles(container) {
   const tf = TITLE_FONTS[STATE.titleFont];
   const bf = BODY_FONTS[STATE.bodyFont];
   const mode = MODES.find(m => m.id === STATE.mode) || MODES[0];
+  applyTextBgFillStyles(container, c);
 
   // Apply computed styles to all elements
   const all = container.querySelectorAll('*');
@@ -4981,7 +5067,7 @@ function showHelp() {
       <h4>编辑内容</h4>
       <ul>
         <li>左侧编辑区可直接输入、粘贴正文或粘贴 Markdown 文本</li>
-        <li>工具栏支持加粗、斜体、标题、引用、代码块、列表、分割线和文字高亮</li>
+        <li>工具栏支持加粗、斜体、标题、引用、代码块、列表、分割线、文字高亮和字体背景填充</li>
         <li>「预处理」可按保守整理、长文分层、教程步骤、种草清单、口播转图文整理纯文本</li>
         <li>「一键清空」会清空当前编辑区内容；「内容暂存」会保存在当前浏览器本地</li>
       </ul>
