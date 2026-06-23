@@ -1676,9 +1676,9 @@ function hasOwnVisibleBackground(el) {
   return !isTransparentCss(bg) || !isTransparentCss(bgColor) || !isTransparentCss(bgImage);
 }
 
-function nearestBackgroundRgb(el) {
+function nearestBackgroundRgb(el, stopAt = null) {
   let node = el;
-  while (node && node.nodeType === Node.ELEMENT_NODE) {
+  while (node && node !== stopAt && node.nodeType === Node.ELEMENT_NODE) {
     const rgb = parseCssRgb(node.style.backgroundColor) || parseCssRgb(node.style.background) || parseCssRgb(node.style.backgroundImage);
     if (rgb) return rgb;
     node = node.parentElement;
@@ -1686,23 +1686,26 @@ function nearestBackgroundRgb(el) {
   return null;
 }
 
-function hasReadableColorOnBackground(el) {
+function hasReadableColorOnBackground(el, stopAt = null) {
   const fg = parseCssRgb(el?.style?.color);
-  const bg = nearestBackgroundRgb(el);
+  const bg = nearestBackgroundRgb(el, stopAt);
   if (!fg || !bg) return false;
   return contrastRatio(fg, bg) >= 3.4;
 }
 
-function hasDarkReadableBackgroundForWhite(el) {
-  const bg = nearestBackgroundRgb(el);
+function hasDarkReadableBackgroundForWhite(el, stopAt = null) {
+  const bg = nearestBackgroundRgb(el, stopAt);
   if (!bg) return false;
   return contrastRatio([255, 255, 255], bg) >= 3.4;
 }
 
-function hasColoredReadableBackground(el) {
+function hasColoredReadableBackground(el, stopAt = null) {
   let node = el;
-  while (node && node.nodeType === Node.ELEMENT_NODE) {
-    if (hasOwnVisibleBackground(node) && !isWhiteCss(node.style.background) && !isWhiteCss(node.style.backgroundColor)) return hasReadableColorOnBackground(el);
+  while (node && node !== stopAt && node.nodeType === Node.ELEMENT_NODE) {
+    if (hasOwnVisibleBackground(node)) {
+      if (isWhiteCss(node.style.background) || isWhiteCss(node.style.backgroundColor)) return false;
+      return hasReadableColorOnBackground(el, stopAt);
+    }
     node = node.parentElement;
   }
   return false;
@@ -1714,37 +1717,36 @@ function normalizeWechatColorModeCompatibility(root) {
   root.style.color = safe.text;
   if (!root.style.background && !root.style.backgroundColor) root.style.backgroundColor = '#FFFFFF';
 
-  root.querySelectorAll('p,li,blockquote,pre,code,[data-theme-role="body"],[data-theme-role="meta"]').forEach(el => {
-    if (isWhiteCss(el.style.color) && hasDarkReadableBackgroundForWhite(el)) return;
-    if (!isWhiteCss(el.style.color) && hasReadableColorOnBackground(el)) return;
+  root.querySelectorAll('p,li,blockquote,[data-theme-role="body"],[data-theme-role="meta"]').forEach(el => {
+    if (isWhiteCss(el.style.color) && hasDarkReadableBackgroundForWhite(el, root)) return;
     el.style.color = el.dataset.themeRole === 'meta' ? safe.muted : safe.text;
   });
 
   root.querySelectorAll('strong,b').forEach(el => {
-    if (isWhiteCss(el.style.color) && hasDarkReadableBackgroundForWhite(el)) return;
+    if (isWhiteCss(el.style.color) && hasDarkReadableBackgroundForWhite(el, root)) return;
     el.style.color = safe.emphasis;
     el.style.fontWeight = '700';
   });
 
   root.querySelectorAll('em,i').forEach(el => {
-    if (isWhiteCss(el.style.color) && hasDarkReadableBackgroundForWhite(el)) return;
+    if (isWhiteCss(el.style.color) && hasDarkReadableBackgroundForWhite(el, root)) return;
     el.style.color = safe.emphasis;
   });
 
   root.querySelectorAll('h1,h2,h3,[data-theme-role="title"]').forEach(el => {
-    const preserveWhiteOnColor = isWhiteCss(el.style.color) && hasDarkReadableBackgroundForWhite(el);
+    const preserveWhiteOnColor = isWhiteCss(el.style.color) && hasDarkReadableBackgroundForWhite(el, root);
     if (!preserveWhiteOnColor) el.style.color = safe.heading;
   });
 
   root.querySelectorAll('span').forEach(el => {
     if (!el.textContent.trim()) return;
-    if (isWhiteCss(el.style.color) && hasDarkReadableBackgroundForWhite(el)) return;
-    if (!isWhiteCss(el.style.color) && hasReadableColorOnBackground(el)) return;
+    if (isWhiteCss(el.style.color) && hasDarkReadableBackgroundForWhite(el, root)) return;
+    if (!isWhiteCss(el.style.color) && hasColoredReadableBackground(el, root)) return;
     const role = el.getAttribute('data-theme-role') || '';
     if (['divider','dots'].includes(role)) return;
-    if (el.closest('h1,h2,h3') && hasReadableColorOnBackground(el)) return;
+    if (el.closest('h1,h2,h3') && hasColoredReadableBackground(el, root)) return;
     if (el.style.color && !isWhiteCss(el.style.color)) el.style.color = safe.emphasis;
-    if (isWhiteCss(el.style.color) && !hasDarkReadableBackgroundForWhite(el)) el.style.color = safe.emphasis;
+    if (isWhiteCss(el.style.color) && !hasDarkReadableBackgroundForWhite(el, root)) el.style.color = safe.emphasis;
   });
 
   root.querySelectorAll('hr,[data-theme-role="divider"]').forEach(el => {
