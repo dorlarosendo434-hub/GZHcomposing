@@ -1414,23 +1414,25 @@ function normalizeWechatInlineLayouts(root) {
   });
 }
 function normalizeWechatPositioning(root) {
-  Array.from(root.querySelectorAll('span')).forEach(span => {
-    if ((span.style.position || '').toLowerCase() !== 'absolute') return;
-    const text = span.textContent.trim();
-    const width = parseFloat(span.style.width || '0');
-    const height = String(span.style.height || '');
+  Array.from(root.querySelectorAll('*')).forEach(el => {
+    if ((el.style.position || '').toLowerCase() !== 'absolute') return;
+    const text = el.textContent.trim();
+    const width = parseFloat(el.style.width || '0');
+    const height = String(el.style.height || '');
     if (!text || (width > 0 && width <= 4) || height === '100%') {
-      span.remove();
+      el.remove();
       return;
     }
-    span.style.position = 'static';
-    span.style.left = '';
-    span.style.right = '';
-    span.style.top = '';
-    span.style.bottom = '';
-    span.style.display = 'inline-block';
-    span.style.verticalAlign = 'middle';
-    span.style.marginRight = span.style.marginRight || '6px';
+    el.style.position = 'static';
+    el.style.left = '';
+    el.style.right = '';
+    el.style.top = '';
+    el.style.bottom = '';
+    if (el.tagName === 'SPAN') {
+      el.style.display = 'inline-block';
+      el.style.verticalAlign = 'middle';
+      el.style.marginRight = el.style.marginRight || '6px';
+    }
   });
 }
 function normalizeWechatTipCards(root) {
@@ -4699,19 +4701,23 @@ function fallbackCopyText(text) {
 function copyToWechat() {
   const html = buildWechatHTMLSnippet();
 
+  const btn = $('copyBtn');
+  const done = () => setButtonCopied(btn, '✅ 已复制', '📋 一键复制到公众号');
+  const fallback = () => {
+    fallbackCopyText(html);
+    setButtonCopied(btn, '✅ 已复制(文本)', '📋 一键复制到公众号');
+  };
+  if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined') {
+    fallback();
+    return;
+  }
+
   navigator.clipboard.write([
     new ClipboardItem({
       'text/html': new Blob([html], {type: 'text/html'}),
       'text/plain': new Blob([preview.innerText], {type: 'text/plain'})
     })
-  ]).then(() => {
-    const btn = $('copyBtn');
-    setButtonCopied(btn, '✅ 已复制', '📋 一键复制到公众号');
-  }).catch(err => {
-    fallbackCopyText(html);
-    const btn = $('copyBtn');
-    setButtonCopied(btn, '✅ 已复制(文本)', '📋 一键复制到公众号');
-  });
+  ]).then(done).catch(fallback);
 }
 function copyHTMLCode() {
   const html = buildWechatHTMLSnippet();
