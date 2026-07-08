@@ -2750,8 +2750,7 @@ function pushBlank(result) {
 }
 
 function smartPreprocess() {
-  const rawText = editor.innerText || '';
-  if (!rawText.trim()) { alert('编辑器为空，请先输入内容'); return; }
+  if (!hasPreprocessContent()) { alert('编辑器为空，请先输入内容'); return; }
   const cards = Object.entries(PREPROCESS_MODE_CONFIG).map(([key, item]) => `
       <div style="border:2px solid #e5e7eb;border-radius:8px;padding:14px;cursor:pointer" onclick="runSmartPreprocess('${key}')">
         <div style="font-size:14px;font-weight:800;color:#6B2303;margin-bottom:4px">${item.name}</div>
@@ -2769,14 +2768,18 @@ function smartPreprocess() {
     </div>
   `);
 }
-function runSmartPreprocess(mode = 'clean') {
-  const rawText = editor.innerText || '';
-  if (!rawText.trim()) { alert('编辑器为空，请先输入内容'); return; }
-  if (mode === 'outline') mode = 'longform';
-  // If already has markdown, warn
-  const hasMd = /^#{1,3}\s/m.test(rawText) || /\*\*/.test(rawText) || /^```/m.test(rawText) || /^[-*+]\s/m.test(rawText) || /^\d+\.\s/m.test(rawText);
-  if (hasMd && !confirm('检测到已有Markdown语法，是否继续预处理？')) return;
 
+const PREPROCESS_PRESERVE_SELECTOR = 'img,pre,table,hr,[data-theme-component],[data-ending-block]';
+
+function hasPreprocessContent() {
+  return !!(editor.innerText || '').trim() || !!editor.querySelector(PREPROCESS_PRESERVE_SELECTOR);
+}
+
+function isPreprocessPreservedElement(el) {
+  return el?.nodeType === Node.ELEMENT_NODE && el.matches(PREPROCESS_PRESERVE_SELECTOR);
+}
+
+function preprocessPlainTextToHTML(rawText, mode) {
   const lines = preparePreprocessLines(rawText, mode);
   const result = [];
   let prevBlank = false;
@@ -2859,9 +2862,54 @@ function runSmartPreprocess(mode = 'clean') {
   }
 
   const mdText = result.join('\n');
-  // Parse MD and set as editor content
-  const parsedHtml = parseMD(mdText);
-  editor.innerHTML = sanitizeContentHTML(parsedHtml);
+  return parseMD(mdText);
+}
+
+function buildPreprocessedEditorHTML(mode) {
+  const chunks = [];
+  const textBuffer = [];
+  const flushText = () => {
+    const text = textBuffer.join('\n\n');
+    textBuffer.length = 0;
+    if (normalizePreprocessText(text).trim()) chunks.push(preprocessPlainTextToHTML(text, mode));
+  };
+  const addText = text => {
+    const normalized = normalizePreprocessText(text);
+    if (normalized.trim()) textBuffer.push(normalized);
+  };
+  const walk = node => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      addText(node.textContent || '');
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    const el = node;
+    if (isPreprocessPreservedElement(el)) {
+      flushText();
+      chunks.push(el.outerHTML);
+      return;
+    }
+    if (el.querySelector(PREPROCESS_PRESERVE_SELECTOR)) {
+      Array.from(el.childNodes).forEach(walk);
+      return;
+    }
+    addText(el.innerText || el.textContent || '');
+  };
+
+  Array.from(editor.childNodes).forEach(walk);
+  flushText();
+  return chunks.join('\n');
+}
+
+function runSmartPreprocess(mode = 'clean') {
+  const rawText = editor.innerText || '';
+  if (!hasPreprocessContent()) { alert('编辑器为空，请先输入内容'); return; }
+  if (mode === 'outline') mode = 'longform';
+  // If already has markdown, warn
+  const hasMd = /^#{1,3}\s/m.test(rawText) || /\*\*/.test(rawText) || /^```/m.test(rawText) || /^[-*+]\s/m.test(rawText) || /^\d+\.\s/m.test(rawText);
+  if (hasMd && !confirm('检测到已有Markdown语法，是否继续预处理？')) return;
+
+  editor.innerHTML = sanitizeContentHTML(buildPreprocessedEditorHTML(mode));
   hideModal();
   scheduleUpdate();
 }
