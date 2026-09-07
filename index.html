@@ -57,6 +57,10 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 .editor img{max-width:100%;height:auto;border-radius:12px;margin:8px 0;display:block}
 .editor img[draggable="true"]{cursor:grab}
 .editor img.editor-img-drop-target{outline:2px dashed var(--primary);outline-offset:3px}
+.editor[data-layout-mode="graphite-green"] p{line-height:1.8!important;margin-top:0!important;margin-bottom:1.35em!important}
+.editor[data-layout-mode="graphite-green"] h1[data-editor-layout-role="major"],.editor[data-layout-mode="graphite-green"] h2[data-editor-layout-role="major"],.editor[data-layout-mode="graphite-green"] h3[data-editor-layout-role="major"]{line-height:1.5!important;margin-top:52px!important;margin-bottom:30px!important}
+.editor[data-layout-mode="graphite-green"] h3[data-editor-layout-role="minor"]{line-height:1.55!important;margin-top:38px!important;margin-bottom:20px!important}
+.editor[data-layout-mode="graphite-green"] p[data-editor-layout-role="step"]{line-height:1.7!important;margin-top:34px!important;margin-bottom:24px!important}
 .editor-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 16px;background:var(--white);border-top:1px solid var(--border);font-size:12px;color:var(--text3);flex-shrink:0}
 .editor-footer-left{display:flex;align-items:center;gap:10px;min-width:0}
 .structure-status{font-size:11px;color:#8A8A8A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}
@@ -3526,12 +3530,29 @@ function applyGraphiteNumberedSteps(root, colors) {
   });
 }
 
+function syncEditorLayoutRhythm() {
+  editor.setAttribute('data-layout-mode', STATE.mode);
+  editor.querySelectorAll('[data-editor-layout-role]').forEach(element => element.removeAttribute('data-editor-layout-role'));
+  if (STATE.mode !== 'graphite-green') return;
+
+  editor.querySelectorAll('h1,h2,h3').forEach(heading => {
+    const isMajorStep = /^第[一二三四五六七八九十百0-9]+步\s*[：:]/.test((heading.textContent || '').trim());
+    heading.setAttribute('data-editor-layout-role', heading.tagName !== 'H3' || isMajorStep ? 'major' : 'minor');
+  });
+  editor.querySelectorAll('p').forEach(paragraph => {
+    if (/^\s*\d{1,2}(?:、|[.．]\s+)/.test(paragraph.textContent || '')) {
+      paragraph.setAttribute('data-editor-layout-role', 'step');
+    }
+  });
+}
+
 function updatePreview() {
   const content = sanitizeContentHTML(editor.innerHTML);
   // Apply to preview with styling
   preview.innerHTML = content;
   ensureGraphiteGreeting(preview);
   applyPreviewStyles();
+  syncEditorLayoutRhythm();
   applyUserAlignmentOverrides(preview);
   applyBgTexture();
   updateCounts();
