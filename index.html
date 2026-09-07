@@ -1564,7 +1564,12 @@ function normalizeWechatEndingLayouts(root) {
 }
 
 function ensureTerminalCodeBar(pre) {
-  if (!pre || pre.querySelector('[data-theme-role="code-window-bar"]')) return;
+  if (!pre) return;
+  const existing = findTerminalCodeBar(pre);
+  if (existing) {
+    existing.setAttribute('data-theme-role', 'code-window-bar');
+    return;
+  }
   const bar = document.createElement('section');
   bar.setAttribute('data-theme-role', 'code-window-bar');
   bar.style.display = 'block';
@@ -1584,6 +1589,25 @@ function ensureTerminalCodeBar(pre) {
     bar.appendChild(dot);
   });
   pre.insertBefore(bar, pre.firstChild);
+}
+
+function findTerminalCodeBar(pre) {
+  const marked = pre.querySelector('[data-theme-role="code-window-bar"]');
+  if (marked) return marked;
+  const top = pre.firstElementChild;
+  if (!top) return null;
+  const candidates = [top, top.firstElementChild].filter(Boolean);
+  return candidates.find(candidate => {
+    const spans = Array.from(candidate.querySelectorAll('span')).slice(0, 8);
+    const dots = spans.filter(span => {
+      const style = getComputedStyle(span);
+      const width = parseFloat(style.width);
+      const height = parseFloat(style.height);
+      const radius = parseFloat(style.borderRadius);
+      return width >= 6 && width <= 16 && height >= 6 && height <= 16 && radius >= Math.min(width, height) / 2;
+    });
+    return dots.length >= 3;
+  }) || null;
 }
 
 function normalizeWechatCodeBlocks(root) {
@@ -3443,6 +3467,65 @@ function ensureGraphiteGreeting(root) {
   root.insertBefore(greeting, root.firstChild);
 }
 
+function removeLeadingText(element, count) {
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  let remaining = count;
+  while (remaining > 0 && walker.nextNode()) {
+    const node = walker.currentNode;
+    const take = Math.min(remaining, node.data.length);
+    node.deleteData(0, take);
+    remaining -= take;
+  }
+}
+
+function applyGraphiteNumberedSteps(root, colors) {
+  if (STATE.mode !== 'graphite-green') return;
+  root.querySelectorAll('p').forEach(paragraph => {
+    if (paragraph.closest('pre,code,blockquote,[data-theme-component]')) return;
+    const text = paragraph.textContent || '';
+    const match = text.match(/^\s*(\d{1,2})(?:、|[.．]\s+)/);
+    if (!match) return;
+
+    removeLeadingText(paragraph, match[0].length);
+    const title = document.createElement('span');
+    title.setAttribute('data-theme-role', 'graphite-heading-title');
+    title.style.display = 'block';
+    title.style.width = '100%';
+    title.style.maxWidth = '100%';
+    title.style.marginTop = '10px';
+    title.style.color = '#27272A';
+    title.style.fontSize = '16px';
+    title.style.fontWeight = '700';
+    title.style.lineHeight = '1.7';
+    title.style.overflowWrap = 'anywhere';
+    title.style.wordBreak = 'break-word';
+    while (paragraph.firstChild) title.appendChild(paragraph.firstChild);
+
+    const label = document.createElement('span');
+    label.setAttribute('data-theme-role', 'graphite-step-label');
+    label.style.display = 'inline-block';
+    label.style.background = colors.main;
+    label.style.color = '#FFFFFF';
+    label.style.fontSize = '11px';
+    label.style.fontWeight = '800';
+    label.style.padding = '3px 9px';
+    label.style.borderRadius = '3px';
+    label.style.letterSpacing = '0.6px';
+    label.style.lineHeight = '1.5';
+    label.textContent = `STEP ${String(match[1]).padStart(2, '0')}`;
+
+    paragraph.appendChild(label);
+    paragraph.appendChild(title);
+    paragraph.style.display = 'block';
+    paragraph.style.width = '100%';
+    paragraph.style.maxWidth = '100%';
+    paragraph.style.boxSizing = 'border-box';
+    paragraph.style.margin = '34px 0 24px';
+    paragraph.style.padding = '0';
+    paragraph.style.textIndent = '0';
+  });
+}
+
 function updatePreview() {
   const content = sanitizeContentHTML(editor.innerHTML);
   // Apply to preview with styling
@@ -3635,6 +3718,7 @@ function applyPreviewStyles() {
 
     applyHeadingStyle(h, mode.headingStyle, c, tag);
   });
+  applyGraphiteNumberedSteps(preview, c);
 
   // Blockquotes
   preview.querySelectorAll('blockquote').forEach(bq => {
@@ -4220,6 +4304,10 @@ function applyHeadingStyle(h, style, c, tag) {
       }
       break;
     case 'graphite-green': {
+      const headingText = (h.textContent || '').trim();
+      const majorStepMatch = headingText.match(/^第([一二三四五六七八九十0-9]+)步\s*[：:]/);
+      const isMajorStep = Boolean(majorStepMatch);
+      const isMajorHeading = tag !== 'H3' || isMajorStep;
       h.querySelectorAll('.heading-bar').forEach(bar => bar.remove());
       h.style.display = 'block';
       h.style.width = '100%';
@@ -4231,21 +4319,23 @@ function applyHeadingStyle(h, style, c, tag) {
       h.style.borderRadius = '0';
       h.style.boxShadow = 'none';
       h.style.padding = '0 0 18px';
-      h.style.marginTop = tag === 'H3' ? '38px' : '52px';
-      h.style.marginBottom = tag === 'H3' ? '20px' : '30px';
+      h.style.marginTop = isMajorHeading ? '52px' : '38px';
+      h.style.marginBottom = isMajorHeading ? '30px' : '20px';
       h.style.textAlign = 'left';
       h.style.letterSpacing = '0.02em';
       h.style.overflowWrap = 'anywhere';
       h.style.wordBreak = 'break-word';
 
       if (!h.dataset.graphiteHeadingAdded) {
-        if (tag === 'H3') {
-          const steps = Array.from(h.parentElement.querySelectorAll('h3'));
+        if (!isMajorHeading) {
+          const steps = Array.from(h.parentElement.querySelectorAll('h3')).filter(item => !/^第[一二三四五六七八九十百0-9]+步\s*[：:]/.test((item.textContent || '').trim()));
           const num = String(steps.indexOf(h) + 1).padStart(2, '0');
           h.innerHTML = `<span data-theme-role="graphite-step-label" style="display:inline-block;background:${c.main};color:#FFFFFF;font-size:11px;font-weight:800;padding:3px 9px;border-radius:3px;letter-spacing:0.6px;line-height:1.5;">STEP ${num}</span><span data-theme-role="graphite-heading-title" style="display:block;width:100%;max-width:100%;margin-top:10px;color:#27272A;font-size:17px;font-weight:800;line-height:1.55;overflow-wrap:anywhere;word-break:break-word;">${h.innerHTML}</span>`;
         } else {
-          const sections = Array.from(h.parentElement.querySelectorAll('h1,h2'));
-          const num = String(sections.indexOf(h) + 1).padStart(2, '0');
+          const sections = Array.from(h.parentElement.querySelectorAll('h1,h2,h3')).filter(item => item.tagName !== 'H3' || /^第[一二三四五六七八九十百0-9]+步\s*[：:]/.test((item.textContent || '').trim()));
+          const chineseSteps = { 一:1, 二:2, 三:3, 四:4, 五:5, 六:6, 七:7, 八:8, 九:9, 十:10 };
+          const explicitStep = majorStepMatch && (/^\d+$/.test(majorStepMatch[1]) ? Number(majorStepMatch[1]) : chineseSteps[majorStepMatch[1]]);
+          const num = String(explicitStep || sections.indexOf(h) + 1).padStart(2, '0');
           h.innerHTML = `<span data-theme-role="graphite-section-number" style="display:block;color:#DCE7E2;font-size:42px;font-weight:900;line-height:1;letter-spacing:-2px;">${num}</span><span data-theme-role="graphite-section-label" style="display:block;margin-top:2px;color:#6F847B;font-size:10px;font-weight:600;line-height:1.5;letter-spacing:3px;">SECTION</span><span data-theme-role="graphite-heading-title" style="display:block;width:100%;max-width:100%;margin-top:6px;color:#27272A;font-size:${tag === 'H1' ? '21px' : '19px'};font-weight:800;line-height:1.5;overflow-wrap:anywhere;word-break:break-word;">${h.innerHTML}</span>`;
         }
         h.dataset.graphiteHeadingAdded = '1';
