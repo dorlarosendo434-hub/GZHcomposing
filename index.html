@@ -475,6 +475,15 @@ const COLOR_SCHEMES = [
 // ===================================================================
 const MODES = [
   {
+    id:'graphite-green', name:'石墨极简·墨绿',
+    desc:'黑灰留白 · 墨绿标记',
+    titleFont:1, bodyFont:0, color:20,
+    lineHeight:1.8, paraSpacing:1.35,
+    headingStyle:'graphite-green',
+    quoteStyle:'left-bar-gray',
+    hrStyle:'center-short'
+  },
+  {
     id:'tutorial', name:'教程干货',
     desc:'黑体 · 结构清晰',
     titleFont:1, bodyFont:0, color:5,
@@ -500,15 +509,6 @@ const MODES = [
     headingStyle:'numbered-divider',
     quoteStyle:'navy-highlight',
     hrStyle:'none'
-  },
-  {
-    id:'japanese', name:'日系文艺',
-    desc:'楷体 · 杏花青蓝',
-    titleFont:5, bodyFont:2, color:17,
-    lineHeight:2.2, paraSpacing:1.5,
-    headingStyle:'small-tag',
-    quoteStyle:'dashed-warm',
-    hrStyle:'wave'
   },
   {
     id:'sweet', name:'甜系种草',
@@ -545,15 +545,6 @@ const MODES = [
     headingStyle:'coffee-label',
     quoteStyle:'coffee-note',
     hrStyle:'coffee-dots'
-  },
-  {
-    id:'graphite-green', name:'石墨极简·墨绿',
-    desc:'黑灰留白 · 墨绿标记',
-    titleFont:1, bodyFont:0, color:20,
-    lineHeight:1.8, paraSpacing:1.35,
-    headingStyle:'graphite-green',
-    quoteStyle:'left-bar-gray',
-    hrStyle:'center-short'
   }
 ];
 
@@ -564,15 +555,14 @@ const DEFAULT_HTML = `<p>支持 <strong>${MODES.length}种排版模式</strong>�
 <h2>排版模式一览</h2>
 <p>点击顶部「排版模式」切换风格。每种模式包含完整的字体、配色、标题渐变装饰、引用卡片和分割线组合：</p>
 <ul>
+<li><strong>石墨极简·墨绿</strong> — 黑灰留白 + 墨绿标记 + 分行标题</li>
 <li><strong>教程干货</strong> — 渐变色块标题 + 紧凑排版</li>
 <li><strong>深度长文</strong> — 居中渐变装饰 + 宋体经典阅读</li>
 <li><strong>知识博主</strong> — 渐变编号标题 + 深海蓝卡片</li>
-<li><strong>日系文艺</strong> — 侧边渐变条 + 莫兰迪柔和配色</li>
 <li><strong>甜系种草</strong> — 渐变胶囊标题 + 粉蓝马卡龙</li>
 <li><strong>品牌商务</strong> — 底部渐变条 + 稳重专业</li>
 <li><strong>马里奥主题</strong> — 红蓝黄绿主题色 + 金币编号与游戏感卡片</li>
 <li><strong>轻手账咖啡馆</strong> — 奶油纸感卡片 + 咖啡棕手账标题</li>
-<li><strong>石墨极简·墨绿</strong> — 黑灰留白 + 墨绿标记 + 分行标题</li>
 </ul>
 <blockquote>好的排版不仅是视觉上的美感，更是对读者阅读体验的尊重。每一处渐变、每一个圆角、每一个间距都在传达用心。</blockquote>
 <h2>特色工具</h2>
@@ -5412,7 +5402,7 @@ function showHelp() {
       </ul>
       <h4>排版设置</h4>
       <ul>
-        <li>顶部可切换 9 种排版模式，并分别调整字体、配色、行距/段距和背景</li>
+        <li>顶部可切换 8 种排版模式，并分别调整字体、配色、行距/段距和背景</li>
         <li>配色支持预设方案、自定义颜色，以及 3 个本地自定义配色槽位</li>
         <li>右上角使用次数为当前浏览器本地累计打开次数，不记录人员信息</li>
       </ul>
