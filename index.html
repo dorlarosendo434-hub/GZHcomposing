@@ -475,9 +475,10 @@ const COLOR_SCHEMES = [
 // ===================================================================
 const MODES = [
   {
-    id:'graphite-green', name:'石墨极简·墨绿',
-    desc:'黑灰留白 · 墨绿标记',
+    id:'graphite-green', name:'石墨极简',
+    desc:'几何留白 · 配色自适应',
     titleFont:1, bodyFont:0, color:20,
+    preserveColor:true,
     lineHeight:1.8, paraSpacing:1.35,
     headingStyle:'graphite-green',
     quoteStyle:'left-bar-gray',
@@ -555,7 +556,7 @@ const DEFAULT_HTML = `<p>支持 <strong>${MODES.length}种排版模式</strong>�
 <h2>排版模式一览</h2>
 <p>点击顶部「排版模式」切换风格。每种模式包含完整的字体、配色、标题渐变装饰、引用卡片和分割线组合：</p>
 <ul>
-<li><strong>石墨极简·墨绿</strong> — 黑灰留白 + 墨绿标记 + 分行标题</li>
+<li><strong>石墨极简</strong> — 几何留白 + 当前配色标记 + 分行标题</li>
 <li><strong>教程干货</strong> — 渐变色块标题 + 紧凑排版</li>
 <li><strong>深度长文</strong> — 居中渐变装饰 + 宋体经典阅读</li>
 <li><strong>知识博主</strong> — 渐变编号标题 + 深海蓝卡片</li>
@@ -3487,7 +3488,7 @@ function applyGraphiteNumberedSteps(root, colors) {
     title.style.width = '100%';
     title.style.maxWidth = '100%';
     title.style.marginTop = '10px';
-    title.style.color = '#27272A';
+    title.style.color = colors.text;
     title.style.fontSize = '16px';
     title.style.fontWeight = '700';
     title.style.lineHeight = '1.7';
@@ -3650,13 +3651,13 @@ function applyPreviewStyles() {
       openingP.style.opacity = '1';
     }
     if (mode.id === 'graphite-green') {
-      openingP.style.background = '#FFFFFF';
-      openingP.style.borderTop = '1px solid #DCE3E0';
-      openingP.style.borderBottom = '1px solid #DCE3E0';
+      openingP.style.background = c.bg;
+      openingP.style.borderTop = `1px solid ${alphaColor(c.main, 0.18, c.sub)}`;
+      openingP.style.borderBottom = `1px solid ${alphaColor(c.main, 0.18, c.sub)}`;
       openingP.style.padding = '22px 0';
       openingP.style.marginTop = '0';
       openingP.style.marginBottom = '34px';
-      openingP.style.color = '#27272A';
+      openingP.style.color = c.text;
       openingP.style.fontSize = '16px';
       openingP.style.fontWeight = '700';
       openingP.style.lineHeight = '1.8';
@@ -3777,11 +3778,11 @@ function applyPreviewStyles() {
       bq.style.border = 'none';
       bq.style.borderLeft = `3px solid ${c.main}`;
       bq.style.borderRadius = '0';
-      bq.style.background = '#FFFFFF';
+      bq.style.background = c.bg;
       bq.style.boxShadow = 'none';
       bq.style.padding = '14px 0 14px 22px';
       bq.style.margin = '0 0 28px';
-      bq.style.color = '#27272A';
+      bq.style.color = c.text;
     }
     // Chinese: classical border
     if (mode.id === 'chinese') {
@@ -3941,7 +3942,7 @@ function applyPreviewStyles() {
   preview.querySelectorAll('strong').forEach(s => {
     s.style.fontWeight = '700';
     if (mode.id === 'graphite-green') {
-      s.style.color = '#27272A';
+      s.style.color = c.text;
       s.style.borderBottom = s.closest('[data-theme-component="graphite-greeting"]') ? 'none' : `2px solid ${c.main}`;
     } else {
       s.style.color = c.accent;
@@ -3964,10 +3965,10 @@ function applyPreviewStyles() {
       img.style.background = journalPaper;
     }
     if (mode.id === 'graphite-green') {
-      img.style.border = '1px solid #DCE3E0';
+      img.style.border = `1px solid ${alphaColor(c.main, 0.18, c.sub)}`;
       img.style.borderRadius = '0';
       img.style.boxShadow = 'none';
-      img.style.background = '#FFFFFF';
+      img.style.background = c.bg;
       img.style.display = 'block';
       img.style.margin = '0 auto';
     }
@@ -4324,9 +4325,9 @@ function applyHeadingStyle(h, style, c, tag) {
       h.style.width = '100%';
       h.style.maxWidth = '100%';
       h.style.boxSizing = 'border-box';
-      h.style.background = '#FFFFFF';
+      h.style.background = c.bg;
       h.style.border = 'none';
-      h.style.borderBottom = '1px solid #DCE3E0';
+      h.style.borderBottom = `1px solid ${alphaColor(c.main, 0.18, c.sub)}`;
       h.style.borderRadius = '0';
       h.style.boxShadow = 'none';
       h.style.padding = '0 0 18px';
@@ -4341,13 +4342,13 @@ function applyHeadingStyle(h, style, c, tag) {
         if (!isMajorHeading) {
           const steps = Array.from(h.parentElement.querySelectorAll('h3')).filter(item => !/^第[一二三四五六七八九十百0-9]+步\s*[：:]/.test((item.textContent || '').trim()));
           const num = String(steps.indexOf(h) + 1).padStart(2, '0');
-          h.innerHTML = `<span data-theme-role="graphite-step-label" style="display:inline-block;background:${c.main};color:#FFFFFF;font-size:11px;font-weight:800;padding:3px 9px;border-radius:3px;letter-spacing:0.6px;line-height:1.5;">STEP ${num}</span><span data-theme-role="graphite-heading-title" style="display:block;width:100%;max-width:100%;margin-top:10px;color:#27272A;font-size:17px;font-weight:800;line-height:1.55;overflow-wrap:anywhere;word-break:break-word;">${h.innerHTML}</span>`;
+          h.innerHTML = `<span data-theme-role="graphite-step-label" style="display:inline-block;background:${c.main};color:#FFFFFF;font-size:11px;font-weight:800;padding:3px 9px;border-radius:3px;letter-spacing:0.6px;line-height:1.5;">STEP ${num}</span><span data-theme-role="graphite-heading-title" style="display:block;width:100%;max-width:100%;margin-top:10px;color:${c.text};font-size:17px;font-weight:800;line-height:1.55;overflow-wrap:anywhere;word-break:break-word;">${h.innerHTML}</span>`;
         } else {
           const sections = Array.from(h.parentElement.querySelectorAll('h1,h2,h3')).filter(item => item.tagName !== 'H3' || /^第[一二三四五六七八九十百0-9]+步\s*[：:]/.test((item.textContent || '').trim()));
           const chineseSteps = { 一:1, 二:2, 三:3, 四:4, 五:5, 六:6, 七:7, 八:8, 九:9, 十:10 };
           const explicitStep = majorStepMatch && (/^\d+$/.test(majorStepMatch[1]) ? Number(majorStepMatch[1]) : chineseSteps[majorStepMatch[1]]);
           const num = String(explicitStep || sections.indexOf(h) + 1).padStart(2, '0');
-          h.innerHTML = `<span data-theme-role="graphite-section-number" style="display:block;color:#DCE7E2;font-size:42px;font-weight:900;line-height:1;letter-spacing:-2px;">${num}</span><span data-theme-role="graphite-section-label" style="display:block;margin-top:2px;color:#6F847B;font-size:10px;font-weight:600;line-height:1.5;letter-spacing:3px;">SECTION</span><span data-theme-role="graphite-heading-title" style="display:block;width:100%;max-width:100%;margin-top:6px;color:#27272A;font-size:${tag === 'H1' ? '21px' : '19px'};font-weight:800;line-height:1.5;overflow-wrap:anywhere;word-break:break-word;">${h.innerHTML}</span>`;
+          h.innerHTML = `<span data-theme-role="graphite-section-number" style="display:block;color:${alphaColor(c.main, 0.16, c.sub)};font-size:42px;font-weight:900;line-height:1;letter-spacing:-2px;">${num}</span><span data-theme-role="graphite-section-label" style="display:block;margin-top:2px;color:${c.main};font-size:10px;font-weight:600;line-height:1.5;letter-spacing:3px;">SECTION</span><span data-theme-role="graphite-heading-title" style="display:block;width:100%;max-width:100%;margin-top:6px;color:${c.text};font-size:${tag === 'H1' ? '21px' : '19px'};font-weight:800;line-height:1.5;overflow-wrap:anywhere;word-break:break-word;">${h.innerHTML}</span>`;
         }
         h.dataset.graphiteHeadingAdded = '1';
       }
@@ -4615,8 +4616,10 @@ function applyMode(mode) {
   STATE.mode = mode.id;
   STATE.titleFont = mode.titleFont;
   STATE.bodyFont = mode.bodyFont;
-  STATE.colorScheme = mode.color;
-  STATE.customColors = null;
+  if (!mode.preserveColor) {
+    STATE.colorScheme = mode.color;
+    STATE.customColors = null;
+  }
   STATE.lineHeight = mode.lineHeight;
   STATE.paraSpacing = mode.paraSpacing;
   updatePreview();
