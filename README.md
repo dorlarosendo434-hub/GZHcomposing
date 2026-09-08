@@ -66,4 +66,15 @@ https://crayonpb.vercel.app
 
 ## 关于作者
 
-工具由「蜡笔进化论」维护。打开排版器后，可在「帮助」中扫码关注公众号，获取更多创作和排版工具更新。
+工具由「蜡笔进化论」维护。
+
+欢迎关注公众号，获取最新的公众号排版案例、主题与功能更新，以及 AI 内容创作实操分享；也可以添加微信进群交流。非诚勿扰。
+
+添加微信时，请备注 **「AI交流」**。
+
+<table>
+  <tr>
+    <td width="50%" align="center"><strong>添加微信</strong><br><sub>备注「AI交流」，进群交流分享</sub><br><img src="assets/contact/wechat.png" alt="微信二维码" width="320"></td>
+    <td width="50%" align="center"><strong>关注公众号</strong><br><sub>获取排版案例与创作工具更新</sub><br><img src="assets/contact/wechat-official-account.jpg" alt="公众号二维码" width="320"></td>
+  </tr>
+</table>
